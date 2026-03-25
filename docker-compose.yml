@@ -1,4 +1,12 @@
 services:
+  discovery-server:
+    build: ./infra/discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
   config-server:
     build: ./infra/config-server
     container_name: config-server
@@ -10,14 +18,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-
-  discovery-server:
-    build: ./infra/discovery-server
-    container_name: discovery-server
-    ports:
-      - "8761:8761"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
 
   gateway-server:
     build: ./infra/gateway-server
