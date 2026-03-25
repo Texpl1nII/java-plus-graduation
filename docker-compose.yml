@@ -1,4 +1,39 @@
 services:
+  config-server:
+    build: ./infra/config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      discovery-server:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+
+  discovery-server:
+    build: ./infra/discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  gateway-server:
+    build: ./infra/gateway-server
+    container_name: gateway-server
+    ports:
+      - "8080:8080"
+    depends_on:
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -17,16 +52,17 @@ services:
   stats-server:
     build: ./stat/stat-server
     container_name: stats-server
-    ports:
-      - "9090:9090"
     depends_on:
       stats-db:
         condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://stats-db:5432/stats
-      SPRING_DATASOURCE_USERNAME: stats
-      SPRING_DATASOURCE_PASSWORD: stats
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
 
   ewm-db:
     image: postgres:16.1
@@ -44,18 +80,18 @@ services:
       retries: 5
 
   ewm-service:
-    build: ./main-service
+    build: ./core/main-service
     container_name: ewm-service
-    ports:
-      - "8080:8080"
     depends_on:
       ewm-db:
         condition: service_healthy
       stats-server:
         condition: service_started
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/ewm
-      SPRING_DATASOURCE_USERNAME: ewm
-      SPRING_DATASOURCE_PASSWORD: ewm
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      STAT_CLIENT_URL: http://stats-server:9090
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
