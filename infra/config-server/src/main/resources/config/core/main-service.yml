@@ -1,11 +1,12 @@
 spring:
   datasource:
     driverClassName: org.postgresql.Driver
-    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:6543/ewm}
+    url: ${DATASOURCE_URL:jdbc:postgresql://ewm-db:5432/ewm}
     username: ${DATASOURCE_USERNAME:ewm}
     password: ${DATASOURCE_PASSWORD:ewm}
   jpa:
     hibernate:
       ddl-auto: create-drop
 
-stat.client.url: ${STATS_CLIENT_URL:http://localhost:9090}
+stats-client:
+  url: ${STATS_CLIENT_URL:http://stats-server:9090}
