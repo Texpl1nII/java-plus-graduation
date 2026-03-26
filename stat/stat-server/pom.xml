@@ -88,7 +88,6 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <finalName>stat-server</finalName>
                     <mainClass>ru.practicum.ewm.stat.StatApplication</mainClass>
                 </configuration>
             </plugin>
