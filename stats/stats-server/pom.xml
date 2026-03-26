@@ -80,6 +80,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <finalName>stat-server</finalName>
+                    <mainClass>ru.practicum.ewm.stat.StatApplication</mainClass>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -87,9 +91,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <mainClass>ru.practicum.ewm.stat.StatApplication</mainClass>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

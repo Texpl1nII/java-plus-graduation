@@ -53,7 +53,7 @@ services:
       - app-network
 
   stats-server:
-    build: ./stat/stat-server
+    build: stats/stats-server
     container_name: stats-server
     ports:
       - "9090:9090"

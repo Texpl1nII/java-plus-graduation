@@ -11,4 +11,3 @@ public class StatApplication {
         SpringApplication.run(StatApplication.class, args);
     }
 }
-
