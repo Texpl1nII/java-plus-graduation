@@ -10,3 +10,12 @@ spring:
           uri: lb://main-service
           predicates:
             - Path=/**
+        - id: stats-server-route
+          uri: lb://stats-server
+          predicates:
+            - Path=/stat/**
+          filters:
+            - RewritePath=/stat/(?<remaining>.*), /${remaining}
+
+server:
+  port: 8081
