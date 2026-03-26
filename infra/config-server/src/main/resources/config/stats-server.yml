@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:6642/stats}
+    username: ${DATASOURCE_USERNAME:stats}
+    password: ${DATASOURCE_PASSWORD:stats}
+  jpa:
+    hibernate:
+      ddl-auto: create-drop

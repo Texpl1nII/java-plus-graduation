@@ -11,7 +11,7 @@ import java.util.Objects;
 public class RestClientConfig {
 
     @Bean
-    public RestClient restClient(@Value("${stat.client.url}") String baseUrl) {
+    public RestClient restClient(@Value("${stats-client.url}") String baseUrl) {
         return RestClient.builder()
                 .baseUrl(Objects.requireNonNull(baseUrl))
                 .build();
