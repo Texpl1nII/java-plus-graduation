@@ -4,8 +4,6 @@ services:
     container_name: discovery-server
     ports:
       - "8761:8761"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
     networks:
       - app-network
 
@@ -18,7 +16,6 @@ services:
       discovery-server:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
     networks:
       - app-network
@@ -34,9 +31,7 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -49,8 +44,6 @@ services:
       POSTGRES_DB: stats
       POSTGRES_USER: stats
       POSTGRES_PASSWORD: stats
-    volumes:
-      - ./data/stats-db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U stats -d stats"]
       interval: 5s
@@ -72,12 +65,10 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - DATASOURCE_USERNAME=stats
       - DATASOURCE_PASSWORD=stats
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
     networks:
       - app-network
 
@@ -90,8 +81,6 @@ services:
       POSTGRES_DB: ewm
       POSTGRES_USER: ewm
       POSTGRES_PASSWORD: ewm
-    volumes:
-      - ./data/main-service:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ewm -d ewm"]
       interval: 5s
@@ -112,12 +101,14 @@ services:
         condition: service_started
       discovery-server:
         condition: service_started
+      config-server:
+        condition: service_started
     environment:
       - DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
       - DATASOURCE_USERNAME=ewm
       - DATASOURCE_PASSWORD=ewm
       - STATS_CLIENT_URL=http://stats-server:9090
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
     networks:
       - app-network
 
