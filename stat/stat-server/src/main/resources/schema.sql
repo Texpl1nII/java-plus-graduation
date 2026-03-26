@@ -8,4 +8,3 @@ CREATE TABLE IF NOT EXISTS endpoint_hits (
 
 CREATE INDEX IF NOT EXISTS idx_endpoint_hits_timestamp ON endpoint_hits(timestamp);
 CREATE INDEX IF NOT EXISTS idx_endpoint_hits_uri ON endpoint_hits(uri);
-
