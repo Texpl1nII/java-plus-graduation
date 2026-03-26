@@ -87,6 +87,9 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <mainClass>ru.practicum.ewm.stat.StatApplication</mainClass>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
