@@ -61,4 +61,3 @@ CREATE TABLE IF NOT EXISTS compilation_events (
     CONSTRAINT fk_compilation_events_to_compilations FOREIGN KEY (compilation_id) REFERENCES compilations(id),
     CONSTRAINT fk_compilation_events_to_events FOREIGN KEY (event_id) REFERENCES events(id)
 );
-
