@@ -1,6 +1,7 @@
 package ru.practicum;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StatClientImpl implements StatClient {
@@ -33,34 +35,54 @@ public class StatClientImpl implements StatClient {
 
     private URI makeUri(String path) {
         ServiceInstance instance = getInstance();
-        return URI.create("http://" + instance.getHost() + ":" + instance.getPort() + path);
+        String url = "http://" + instance.getHost() + ":" + instance.getPort() + path;
+        log.info("Making URI: {}", url);
+        return URI.create(url);
     }
 
     @Override
     public void hit(@NonNull EndpointHitDto paramHitDto) {
+        log.info("Sending hit: {}", paramHitDto);
         RestClient restClient = restClientBuilder.build();
         restClient.post()
                 .uri(makeUri("/hit"))
                 .body(paramHitDto)
                 .retrieve()
                 .toBodilessEntity();
+        log.info("Hit sent successfully");
     }
 
     @Override
     public List<ViewStatsDto> getStat(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
+        log.info("Getting stats: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
+
+        URI fullUri = makeUri("/stats");
         RestClient restClient = restClientBuilder.build();
 
-        URI uri = makeUri("/stats");
+        // Строим URL с параметрами
+        StringBuilder urlBuilder = new StringBuilder(fullUri.toString());
+        urlBuilder.append("?start=").append(start.format(FORMATTER));
+        urlBuilder.append("&end=").append(end.format(FORMATTER));
 
-        return restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(uri.getPath())
-                        .queryParam("start", start.format(FORMATTER))
-                        .queryParam("end", end.format(FORMATTER))
-                        .queryParam("uris", uris != null && !uris.isEmpty() ? uris : null)
-                        .queryParam("unique", unique)
-                        .build())
+        if (uris != null && !uris.isEmpty()) {
+            for (String uri : uris) {
+                urlBuilder.append("&uris=").append(uri);
+            }
+        }
+
+        if (unique != null) {
+            urlBuilder.append("&unique=").append(unique);
+        }
+
+        String url = urlBuilder.toString();
+        log.info("Request URL: {}", url);
+
+        List<ViewStatsDto> result = restClient.get()
+                .uri(url)
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<ViewStatsDto>>() {});
+
+        log.info("Stats result: {}", result);
+        return result;
     }
 }
