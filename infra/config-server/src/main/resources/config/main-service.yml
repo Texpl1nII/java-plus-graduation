@@ -7,6 +7,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-
-stats-client:
-  url: ${STATS_CLIENT_URL:http://stats-server:9090}
