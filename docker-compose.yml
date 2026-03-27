@@ -107,7 +107,6 @@ services:
       - DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
       - DATASOURCE_USERNAME=ewm
       - DATASOURCE_PASSWORD=ewm
-      - STATS_CLIENT_URL=http://stats-server:9090
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
     networks:
       - app-network

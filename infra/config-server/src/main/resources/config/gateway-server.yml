@@ -6,16 +6,23 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: main-service-route
-          uri: lb://main-service
-          predicates:
-            - Path=/**
         - id: stats-server-route
           uri: lb://stats-server
           predicates:
             - Path=/stat/**
           filters:
             - RewritePath=/stat/(?<remaining>.*), /${remaining}
+        - id: main-service-route
+          uri: lb://main-service
+          predicates:
+            - Path=/**
+  config:
+    import: "configserver:"
 
 server:
-  port: 8081
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
