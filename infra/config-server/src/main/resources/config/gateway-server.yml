@@ -16,8 +16,6 @@ spring:
           uri: lb://main-service
           predicates:
             - Path=/**
-  config:
-    import: "configserver:"
 
 server:
   port: 8080

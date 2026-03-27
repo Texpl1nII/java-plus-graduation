@@ -42,10 +42,10 @@ services:
       - "6642:5432"
     environment:
       POSTGRES_DB: stats
-      POSTGRES_USER: stats
-      POSTGRES_PASSWORD: stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stats -d stats"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d stats" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -79,10 +79,10 @@ services:
       - "6543:5432"
     environment:
       POSTGRES_DB: ewm
-      POSTGRES_USER: ewm
-      POSTGRES_PASSWORD: ewm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ewm -d ewm"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d ewm" ]
       interval: 5s
       timeout: 5s
       retries: 5

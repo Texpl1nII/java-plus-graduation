@@ -2,8 +2,8 @@ spring:
   datasource:
     driverClassName: org.postgresql.Driver
     url: ${DATASOURCE_URL:jdbc:postgresql://stats-db:5432/stats}
-    username: ${DATASOURCE_USERNAME:stats}
-    password: ${DATASOURCE_PASSWORD:stats}
+    username: ${DATASOURCE_USERNAME:postgres}
+    password: ${DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: create-drop
