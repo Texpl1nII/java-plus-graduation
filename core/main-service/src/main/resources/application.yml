@@ -21,3 +21,8 @@ eureka:
       enabled: true
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
+logging:
+    level:
+      com.zaxxer.hikari: DEBUG
+      org.hibernate: DEBUG
