@@ -1,4 +1,40 @@
 services:
+  discovery-server:
+    build: ./infra/discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - app-network
+
+  config-server:
+    build: ./infra/config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      discovery-server:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    networks:
+      - app-network
+
+  gateway-server:
+    build: ./infra/gateway-server
+    container_name: gateway-server
+    ports:
+      - "8080:8080"
+    depends_on:
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    networks:
+      - app-network
+
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -6,27 +42,35 @@ services:
       - "6642:5432"
     environment:
       POSTGRES_DB: stats
-      POSTGRES_USER: stats
-      POSTGRES_PASSWORD: stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stats -d stats"]
-      interval: 10s
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d stats" ]
+      interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   stats-server:
-    build: ./stat/stat-server
+    build: stats/stats-server
     container_name: stats-server
     ports:
       - "9090:9090"
     depends_on:
       stats-db:
         condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://stats-db:5432/stats
-      SPRING_DATASOURCE_USERNAME: stats
-      SPRING_DATASOURCE_PASSWORD: stats
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      - DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
+      - DATASOURCE_USERNAME=stats
+      - DATASOURCE_PASSWORD=stats
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    networks:
+      - app-network
 
   ewm-db:
     image: postgres:16.1
@@ -35,27 +79,38 @@ services:
       - "6543:5432"
     environment:
       POSTGRES_DB: ewm
-      POSTGRES_USER: ewm
-      POSTGRES_PASSWORD: ewm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ewm -d ewm"]
-      interval: 10s
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d ewm" ]
+      interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   ewm-service:
-    build: ./main-service
+    build: ./core/main-service
     container_name: ewm-service
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
       ewm-db:
         condition: service_healthy
       stats-server:
         condition: service_started
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/ewm
-      SPRING_DATASOURCE_USERNAME: ewm
-      SPRING_DATASOURCE_PASSWORD: ewm
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      STAT_CLIENT_URL: http://stats-server:9090
+      - DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
+      - DATASOURCE_USERNAME=ewm
+      - DATASOURCE_PASSWORD=ewm
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
