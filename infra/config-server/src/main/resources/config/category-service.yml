@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: ${CATEGORY_DB_URL:jdbc:postgresql://category-db:5432/category}
+    username: ${CATEGORY_DB_USER:postgres}
+    password: ${CATEGORY_DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update

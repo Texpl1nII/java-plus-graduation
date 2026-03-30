@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: ${EVENT_DB_URL:jdbc:postgresql://event-db:5432/event}
+    username: ${EVENT_DB_USER:postgres}
+    password: ${EVENT_DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
