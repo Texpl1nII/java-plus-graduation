@@ -1,4 +1,4 @@
-package ru.practicum;
+package ru.practicum.compilation;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,8 +8,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableFeignClients
-public class EventApplication {
+public class CompilationApplication {
     public static void main(String[] args) {
-        SpringApplication.run(EventApplication.class, args);
+        SpringApplication.run(CompilationApplication.class, args);
     }
 }
