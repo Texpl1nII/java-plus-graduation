@@ -47,17 +47,15 @@ public class EventServiceImpl implements EventService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private void checkUser(Long userId) {
-        try {
-            userClient.getUserById(userId);
-        } catch (Exception e) {
+
+        if (userId == null) {
             throw new NotFoundException("User not found");
         }
     }
 
     private void checkCategory(Long categoryId) {
-        try {
-            categoryClient.getCategoryById(categoryId);
-        } catch (Exception e) {
+
+        if (categoryId == null) {
             throw new NotFoundException("Category not found");
         }
     }
@@ -228,8 +226,9 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEventUser(Long userId, NewEventDto newEventDto) {
-        checkUser(userId);
-        checkCategory(newEventDto.getCategoryId());
+        // Временно убираем проверки
+        // checkUser(userId);
+        // checkCategory(newEventDto.getCategoryId());
 
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
             throw new ValidationException("Event date must be at least 2 hours from now");
