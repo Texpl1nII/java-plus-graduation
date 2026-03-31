@@ -1,6 +1,7 @@
 package ru.practicum.category.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import ru.practicum.exception.NotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
@@ -24,11 +26,15 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryDto create(NewCategoryDto newCategoryDto) {
+        log.info("Creating category with name: {}", newCategoryDto.getName());
+
         if (categoryRepository.existsByName(newCategoryDto.getName())) {
             throw new ConflictException("Category with this name already exists");
         }
         Category category = categoryMapper.toEntity(newCategoryDto);
-        return categoryMapper.toDto(categoryRepository.save(category));
+        Category saved = categoryRepository.save(category);
+        log.info("Category created with id: {}", saved.getId());
+        return categoryMapper.toDto(saved);
     }
 
     @Override

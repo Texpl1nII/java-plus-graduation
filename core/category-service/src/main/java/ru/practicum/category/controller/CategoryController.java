@@ -27,8 +27,10 @@ public class CategoryController {
 
     @GetMapping("/{catId}")
     public CategoryDto getById(@PathVariable Long catId) {
-        log.info("Get category by id {}", catId);
-        return categoryService.getById(catId);
+        log.info("Get category by id: {}", catId);
+        CategoryDto category = categoryService.getById(catId);
+        log.info("Found category: {}", category);
+        return category;
     }
 }
 

@@ -54,8 +54,12 @@ public class EventServiceImpl implements EventService {
     }
 
     private void checkCategory(Long categoryId) {
-
-        if (categoryId == null) {
+        log.info("Checking category with id: {}", categoryId);
+        try {
+            CategoryDto category = categoryClient.getCategoryById(categoryId);
+            log.info("Category found: {}", category);
+        } catch (Exception e) {
+            log.error("Category not found: {}", categoryId, e);
             throw new NotFoundException("Category not found");
         }
     }
