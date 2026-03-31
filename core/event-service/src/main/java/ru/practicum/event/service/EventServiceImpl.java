@@ -230,9 +230,9 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEventUser(Long userId, NewEventDto newEventDto) {
-        // Временно убираем проверки
-        // checkUser(userId);
-        // checkCategory(newEventDto.getCategoryId());
+        // Раскомментировать эти две строки!
+        checkUser(userId);
+        checkCategory(newEventDto.getCategoryId());
 
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
             throw new ValidationException("Event date must be at least 2 hours from now");

@@ -33,6 +33,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDto getUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id=" + userId + " was not found"));
+        return userMapper.toDto(user);
+    }
+
+    @Override
     public List<UserDto> getUsers(List<Long> ids, int from, int size) {
         int page = from / size;
         PageRequest pageRequest = PageRequest.of(page, size);
