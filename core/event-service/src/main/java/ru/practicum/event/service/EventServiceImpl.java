@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatClient;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
+import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.RequestClient;
+import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
@@ -38,21 +40,24 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final StatClient statClient;
     private final EventMapper eventMapper;
+    private final CategoryClient categoryClient;
+    private final UserClient userClient;
     private final RequestClient requestClient;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    // Временные методы для проверки (позже заменить на Feign)
     private void checkUser(Long userId) {
-        // TODO: Feign вызов к user-service
-        if (userId == null) {
+        try {
+            userClient.getUserById(userId);
+        } catch (Exception e) {
             throw new NotFoundException("User not found");
         }
     }
 
     private void checkCategory(Long categoryId) {
-        // TODO: Feign вызов к category-service
-        if (categoryId == null) {
+        try {
+            categoryClient.getCategoryById(categoryId);
+        } catch (Exception e) {
             throw new NotFoundException("Category not found");
         }
     }
@@ -281,7 +286,6 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
         checkUser(userId);
-        // TODO: Feign вызов к request-service
         return requestClient.getEventRequests(userId, eventId);
     }
 
@@ -289,7 +293,6 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public EventRequestStatusUpdateResult changeRequestStatus(Long userId, Long eventId, EventRequestStatusUpdateDto request) {
         checkUser(userId);
-        // TODO: Feign вызов к request-service
         return requestClient.changeRequestStatus(userId, eventId, request);
     }
 
