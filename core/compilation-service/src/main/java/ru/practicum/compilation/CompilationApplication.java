@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"ru.practicum.compilation.client", "ru.practicum"})
 @ComponentScan(basePackages = {"ru.practicum.compilation", "ru.practicum"})
 public class CompilationApplication {
     public static void main(String[] args) {

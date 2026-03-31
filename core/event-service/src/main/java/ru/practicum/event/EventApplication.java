@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"ru.practicum.event.client", "ru.practicum"})
 @ComponentScan(basePackages = {"ru.practicum.event", "ru.practicum"})
 public class EventApplication {
     public static void main(String[] args) {
