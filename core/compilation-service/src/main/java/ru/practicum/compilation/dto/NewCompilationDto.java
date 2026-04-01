@@ -6,13 +6,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class NewCompilationDto {
-    private List<Long> events;
+    private List<Long> events = new ArrayList<>();  // Инициализируем пустым списком
 
     private Boolean pinned = false;
 
