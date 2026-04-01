@@ -20,10 +20,10 @@ public class ParticipationRequestController {
 
     private final ParticipationRequestService requestService;
 
-    @PostMapping
+    @PostMapping("/{eventId}")  // ← ИСПРАВЛЕНО: добавили eventId в путь
     @ResponseStatus(HttpStatus.CREATED)
     public ParticipationRequestDto create(@PathVariable @Positive Long userId,
-                                          @RequestParam @Positive Long eventId) {
+                                          @PathVariable @Positive Long eventId) {  // ← ИСПРАВЛЕНО: @RequestParam → @PathVariable
         log.info("POST: Создание запроса. Параметры ID пользователя: {}, ID события: {}", userId, eventId);
         return requestService.create(userId, eventId);
     }

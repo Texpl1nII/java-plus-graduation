@@ -243,6 +243,8 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEventUser(Long userId, NewEventDto newEventDto) {
+        log.info("Creating event for user {} with data: {}", userId, newEventDto);  // ← ДОБАВИТЬ
+
         checkUser(userId);
         checkCategory(newEventDto.getCategoryId());
 
@@ -259,7 +261,10 @@ public class EventServiceImpl implements EventService {
         Location location = eventMapper.toLocation(newEventDto.getLocation());
         event.setLocation(location);
 
-        return toEventFullDtoWithStats(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        log.info("Event created with id: {}", saved.getId());  // ← ДОБАВИТЬ
+
+        return toEventFullDtoWithStats(saved);
     }
 
     @Override
