@@ -2,12 +2,12 @@ spring:
   application:
     name: gateway-server
   config:
-    import: "configserver:http://localhost:8888"  # ← ЯВНО УКАЗАТЬ URL
+    import: "configserver:"  # ← убрать URL
   cloud:
     config:
       fail-fast: true
       discovery:
-        enabled: false
+        enabled: true          # ← включить discovery
         service-id: config-server
       retry:
         useRandomPolicy: true
@@ -19,7 +19,7 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://discovery-server:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
   instance:
