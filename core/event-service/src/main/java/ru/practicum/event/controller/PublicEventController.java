@@ -53,6 +53,12 @@ public class PublicEventController {
         return eventService.getEventsPublic(params);
     }
 
+    @GetMapping("/ids")
+    public List<EventShortDto> getEventsByIds(@RequestParam List<Long> ids) {
+        log.info("Get events by ids: {}", ids);
+        return eventService.getEventsByIds(ids);
+    }
+
     @GetMapping("/{id}")
     public EventFullDto getEvent(@PathVariable Long id, HttpServletRequest request) {
         log.info("Get event public id={}", id);

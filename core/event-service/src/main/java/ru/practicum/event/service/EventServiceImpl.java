@@ -58,6 +58,12 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    @Override
+    public List<EventShortDto> getEventsByIds(List<Long> ids) {
+        List<Event> events = eventRepository.findAllById(ids);
+        return makeEventShortDtoList(events);
+    }
+
     private void checkCategory(Long categoryId) {
         if (categoryId == null) {
             throw new ValidationException("Category ID cannot be null");

@@ -47,6 +47,12 @@ public class AdminEventController {
         return eventService.getEventsAdmin(params);
     }
 
+    @GetMapping("/{eventId}")
+    public EventFullDto getEventById(@PathVariable Long eventId) {
+        log.info("Get event by id admin: {}", eventId);
+        return eventService.getEventById(eventId);
+    }
+
     @PatchMapping("/{eventId}")
     public EventFullDto updateEvent(@PathVariable Long eventId,
                                     @Valid @RequestBody UpdateEventAdminDto request) {
