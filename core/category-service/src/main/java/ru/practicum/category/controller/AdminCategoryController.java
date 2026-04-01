@@ -37,4 +37,3 @@ public class AdminCategoryController {
         return categoryService.update(catId, categoryDto);
     }
 }
-

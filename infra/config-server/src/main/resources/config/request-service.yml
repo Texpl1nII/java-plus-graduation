@@ -1,9 +1,24 @@
 spring:
   datasource:
-    driverClassName: org.postgresql.Driver
+    driver-class-name: org.postgresql.Driver
     url: ${REQUEST_DB_URL:jdbc:postgresql://request-db:5432/request}
     username: ${REQUEST_DB_USER:postgres}
     password: ${REQUEST_DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+server:
+  port: 0
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+    prefer-ip-address: true
