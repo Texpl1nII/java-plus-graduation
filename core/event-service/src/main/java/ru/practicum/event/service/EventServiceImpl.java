@@ -21,9 +21,9 @@ import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.Location;
 import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
-import ru.practicum.exception.ConflictException;
-import ru.practicum.exception.NotFoundException;
-import ru.practicum.exception.ValidationException;
+import ru.practicum.event.exception.ConflictException;
+import ru.practicum.event.exception.NotFoundException;
+import ru.practicum.event.exception.ValidationException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

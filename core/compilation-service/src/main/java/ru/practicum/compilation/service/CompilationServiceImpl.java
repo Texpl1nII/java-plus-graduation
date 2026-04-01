@@ -13,7 +13,7 @@ import ru.practicum.compilation.dto.UpdateCompilationDto;
 import ru.practicum.compilation.mapper.CompilationMapper;
 import ru.practicum.compilation.model.Compilation;
 import ru.practicum.compilation.repository.CompilationRepository;
-import ru.practicum.exception.NotFoundException;
+import ru.practicum.compilation.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;

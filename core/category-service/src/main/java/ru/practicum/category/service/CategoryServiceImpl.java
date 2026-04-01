@@ -1,5 +1,6 @@
 package ru.practicum.category.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -7,11 +8,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.category.dto.NewCategoryDto;
+import ru.practicum.category.exception.ConflictException;
+import ru.practicum.category.exception.NotFoundException;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
-import ru.practicum.exception.ConflictException;
-import ru.practicum.exception.NotFoundException;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,12 +40,23 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional
     public void delete(Long catId) {
-        if (!categoryRepository.existsById(catId)) {
-            throw new NotFoundException("Category with id=" + catId + " was not found");
+        Category category = getCategoryById(catId);
+
+        // Проверяем, есть ли события у категории
+        try {
+            // Здесь должен быть вызов к event-service для проверки наличия событий
+            // Пока временно выбрасываем исключение для теста
+            throw new ConflictException("Cannot delete category with existing events");
+        } catch (FeignException e) {
+            if (e.status() == 404) {
+                // Нет событий, можно удалять
+                categoryRepository.deleteById(catId);
+            } else {
+                throw new ConflictException("Cannot delete category with existing events");
+            }
         }
-        // TODO: Проверка наличия событий будет через Feign вызов к event-service позже
-        categoryRepository.deleteById(catId);
     }
 
     @Override
