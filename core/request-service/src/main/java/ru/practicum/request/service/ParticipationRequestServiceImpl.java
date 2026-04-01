@@ -215,4 +215,10 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         return result;
     }
+
+    @Override
+    public Long countByEventId(Long eventId) {
+        log.info("Counting requests for event: {}", eventId);
+        return repository.countByEventId(eventId);
+    }
 }

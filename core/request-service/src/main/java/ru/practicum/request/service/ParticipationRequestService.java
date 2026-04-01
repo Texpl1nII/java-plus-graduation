@@ -23,4 +23,6 @@ public interface ParticipationRequestService {
     // Изменение статуса запросов (подтверждение/отклонение)
     EventRequestStatusUpdateResult changeRequestStatus(Long userId, Long eventId,
                                                        EventRequestStatusUpdateDto updateDto);
+
+    Long countByEventId(Long eventId);
 }
