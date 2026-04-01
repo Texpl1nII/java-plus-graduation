@@ -1,4 +1,4 @@
-package ru.practicum.exception;
+package ru.practicum.category.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -6,6 +6,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.practicum.exception.ConflictException;
+import ru.practicum.exception.ErrorResponse;
+import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
 
 @Slf4j
 @RestControllerAdvice
