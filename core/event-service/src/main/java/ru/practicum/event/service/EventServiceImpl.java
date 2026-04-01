@@ -47,20 +47,28 @@ public class EventServiceImpl implements EventService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private void checkUser(Long userId) {
-
         if (userId == null) {
             throw new NotFoundException("User not found");
+        }
+        try {
+            userClient.getUserById(userId);
+        } catch (Exception e) {
+            log.error("User not found: {}", userId, e);
+            throw new NotFoundException("User with id=" + userId + " was not found");
         }
     }
 
     private void checkCategory(Long categoryId) {
+        if (categoryId == null) {
+            throw new ValidationException("Category ID cannot be null");
+        }
         log.info("Checking category with id: {}", categoryId);
         try {
             CategoryDto category = categoryClient.getCategoryById(categoryId);
             log.info("Category found: {}", category);
         } catch (Exception e) {
             log.error("Category not found: {}", categoryId, e);
-            throw new NotFoundException("Category not found");
+            throw new NotFoundException("Category with id=" + categoryId + " was not found");
         }
     }
 
@@ -156,7 +164,6 @@ public class EventServiceImpl implements EventService {
         }
 
         if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
-            // TODO: Заменить на Feign вызов к request-service для проверки лимитов
             builder.and(qEvent.participantLimit.eq(0));
         }
 
@@ -230,7 +237,6 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEventUser(Long userId, NewEventDto newEventDto) {
-        // Раскомментировать эти две строки!
         checkUser(userId);
         checkCategory(newEventDto.getCategoryId());
 
@@ -304,8 +310,8 @@ public class EventServiceImpl implements EventService {
         if (request.getAnnotation() != null) event.setAnnotation(request.getAnnotation());
         if (request.getDescription() != null) event.setDescription(request.getDescription());
         if (request.getEventDate() != null) event.setEventDate(request.getEventDate());
-        if (request.getCategory() != null) {
-            event.setCategoryId(request.getCategory());
+        if (request.getCategoryId() != null) {  // ← ИСПРАВЛЕНО: getCategory() → getCategoryId()
+            event.setCategoryId(request.getCategoryId());
         }
         if (request.getLocation() != null) {
             event.setLocation(eventMapper.toLocation(request.getLocation()));

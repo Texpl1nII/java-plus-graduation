@@ -22,7 +22,7 @@ public abstract class BaseUpdateEventDto {
     @Size(min = 20, max = 7000)
     private String description;
 
-    private Long category;
+    private Long categoryId;  // ← ИСПРАВЛЕНО: category → categoryId
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime eventDate;
