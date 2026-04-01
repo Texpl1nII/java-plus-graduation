@@ -16,7 +16,7 @@ public class EventFullDto {
     private String title;
     private String annotation;
     private String description;
-    private Long categoryId;           // ← вместо CategoryDto category
+    private CategoryDto category;;           // ← вместо CategoryDto category
     private Boolean paid;
     private Long initiatorId;           // ← вместо UserShortDto initiator
     private LocationDto location;

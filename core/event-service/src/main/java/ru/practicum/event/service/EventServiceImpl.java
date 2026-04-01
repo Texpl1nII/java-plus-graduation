@@ -375,6 +375,10 @@ public class EventServiceImpl implements EventService {
                     EventFullDto dto = eventMapper.toFullDto(event);
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
+
+                    // ← ДОБАВИТЬ ЗАПОЛНЕНИЕ КАТЕГОРИИ
+                    dto.setCategory(getCategoryById(event.getCategoryId()));
+
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -389,6 +393,10 @@ public class EventServiceImpl implements EventService {
                     EventShortDto dto = eventMapper.toShortDto(event);
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
+
+                    // ← ДОБАВИТЬ ЗАПОЛНЕНИЕ КАТЕГОРИИ
+                    dto.setCategory(getCategoryById(event.getCategoryId()));
+
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -446,5 +454,15 @@ public class EventServiceImpl implements EventService {
     private Event getEventByIdOrThrow(Long eventId) {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
+    }
+
+    private CategoryDto getCategoryById(Long categoryId) {
+        if (categoryId == null) return null;
+        try {
+            return categoryClient.getCategoryById(categoryId);
+        } catch (Exception e) {
+            log.error("Failed to get category with id: {}", categoryId, e);
+            return null;
+        }
     }
 }

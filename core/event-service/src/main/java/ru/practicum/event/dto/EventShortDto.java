@@ -14,7 +14,7 @@ public class EventShortDto {
     private Long id;
     private String title;
     private String annotation;
-    private Long categoryId;           // ← вместо CategoryDto category
+    private CategoryDto category;;           // ← вместо CategoryDto category
     private Boolean paid;
     private Long initiatorId;           // ← вместо UserShortDto initiator
 
