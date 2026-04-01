@@ -1,9 +1,9 @@
 spring:
   datasource:
+    url: jdbc:postgresql://postgres:5432/ewm_compilation
+    username: postgres
+    password: postgres
     driver-class-name: org.postgresql.Driver
-    url: ${COMPILATION_DB_URL:jdbc:postgresql://compilation-db:5432/compilation}
-    username: ${COMPILATION_DB_USER:postgres}
-    password: ${COMPILATION_DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update

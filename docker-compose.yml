@@ -1,16 +1,68 @@
+version: '3.8'
+
 services:
+  postgres:
+    image: postgres:16.1
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - app-network
+
+  db-init:
+    image: postgres:16.1
+    container_name: db-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: postgres
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        echo "Waiting for PostgreSQL..."
+        until psql -h postgres -U postgres -d postgres -c '\q'; do
+          sleep 1
+        done
+        
+        echo "Creating databases..."
+        psql -h postgres -U postgres -d postgres -v ON_ERROR_STOP=1 <<-EOSQL
+        CREATE DATABASE IF NOT EXISTS ewm_category;
+        CREATE DATABASE IF NOT EXISTS ewm_event;
+        CREATE DATABASE IF NOT EXISTS ewm_user;
+        CREATE DATABASE IF NOT EXISTS ewm_request;
+        CREATE DATABASE IF NOT EXISTS ewm_compilation;
+        CREATE DATABASE IF NOT EXISTS stats;
+        EOSQL
+        echo "Databases created successfully!"
+    networks:
+      - app-network
+
   discovery-server:
     build: ./infra/discovery-server
     container_name: discovery-server
     ports:
       - "8761:8761"
-    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
     networks:
       - app-network
 
@@ -19,19 +71,16 @@ services:
     container_name: config-server
     ports:
       - "8888:8888"
-    restart: on-failure
     depends_on:
       discovery-server:
         condition: service_healthy
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=classpath:/config
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
     networks:
       - app-network
 
@@ -40,7 +89,6 @@ services:
     container_name: gateway-server
     ports:
       - "8080:8080"
-    restart: on-failure
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -49,32 +97,6 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - app-network
-
-  # Статистика
-  stats-db:
-    image: postgres:16.1
-    container_name: stats-db
-    ports:
-      - "6642:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: stats
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d stats"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
     networks:
       - app-network
 
@@ -83,140 +105,19 @@ services:
     container_name: stats-server
     ports:
       - "9090:9090"
-    restart: on-failure
     depends_on:
-      stats-db:
+      postgres:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/stats
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
-      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-    networks:
-      - app-network
-
-  # БД для микросервисов
-  user-db:
-    image: postgres:16.1
-    container_name: user-db
-    ports:
-      - "5433:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: user
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d user"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-    networks:
-      - app-network
-
-  category-db:
-    image: postgres:16.1
-    container_name: category-db
-    ports:
-      - "5434:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: category
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d category"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-    networks:
-      - app-network
-
-  event-db:
-    image: postgres:16.1
-    container_name: event-db
-    ports:
-      - "5435:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: event
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d event"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-    networks:
-      - app-network
-
-  request-db:
-    image: postgres:16.1
-    container_name: request-db
-    ports:
-      - "5436:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: request
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d request"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-    networks:
-      - app-network
-
-  compilation-db:
-    image: postgres:16.1
-    container_name: compilation-db
-    ports:
-      - "5437:5432"
-    restart: on-failure
-    environment:
-      POSTGRES_DB: compilation
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d compilation"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-    networks:
-      - app-network
-
-  # Микросервисы
-  user-service:
-    build: ./core/user-service
-    container_name: user-service
-    restart: on-failure
-    depends_on:
-      user-db:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://user-db:5432/user
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
@@ -228,23 +129,44 @@ services:
     container_name: category-service
     restart: on-failure
     depends_on:
-      category-db:
+      postgres:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://category-db:5432/category
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_category
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-    # ЭТО РЕШЕНИЕ
-    extra_hosts:
-      - "category-db:172.17.0.1"
+    networks:
+      - app-network
+
+  user-service:
+    build: ./core/user-service
+    container_name: user-service
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_user
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
     networks:
       - app-network
 
@@ -253,18 +175,18 @@ services:
     container_name: event-service
     restart: on-failure
     depends_on:
-      event-db:
+      postgres:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://event-db:5432/event
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_event
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
@@ -276,18 +198,18 @@ services:
     container_name: request-service
     restart: on-failure
     depends_on:
-      request-db:
+      postgres:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://request-db:5432/request
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_request
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
@@ -299,18 +221,18 @@ services:
     container_name: compilation-service
     restart: on-failure
     depends_on:
-      compilation-db:
+      postgres:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://compilation-db:5432/compilation
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_compilation
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false

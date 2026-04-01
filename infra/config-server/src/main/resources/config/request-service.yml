@@ -1,9 +1,9 @@
 spring:
   datasource:
+    url: jdbc:postgresql://postgres:5432/ewm_request
+    username: postgres
+    password: postgres
     driver-class-name: org.postgresql.Driver
-    url: ${REQUEST_DB_URL:jdbc:postgresql://request-db:5432/request}
-    username: ${REQUEST_DB_USER:postgres}
-    password: ${REQUEST_DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
