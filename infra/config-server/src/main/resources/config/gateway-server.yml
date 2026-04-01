@@ -10,28 +10,57 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/admin/users/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: userService
+                fallbackUri: forward:/fallback
         - id: category-service
           uri: lb://category-service
           predicates:
             - Path=/categories/**,/admin/categories/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: categoryService
+                fallbackUri: forward:/fallback
         - id: event-service
           uri: lb://event-service
           predicates:
             - Path=/events/**,/admin/events/**,/users/*/events/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: eventService
+                fallbackUri: forward:/fallback
         - id: request-service
           uri: lb://request-service
           predicates:
             - Path=/users/*/requests/**,/users/*/events/*/requests/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: requestService
+                fallbackUri: forward:/fallback
         - id: compilation-service
           uri: lb://compilation-service
           predicates:
             - Path=/compilations/**,/admin/compilations/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: compilationService
+                fallbackUri: forward:/fallback
         - id: stats-server
           uri: lb://stats-server
           predicates:
             - Path=/stat/**
           filters:
             - RewritePath=/stat/(?<remaining>.*), /${remaining}
+            - name: CircuitBreaker
+              args:
+                name: statsService
+                fallbackUri: forward:/fallback
 
 server:
   port: 8080
@@ -40,3 +69,10 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG

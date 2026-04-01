@@ -4,6 +4,11 @@ services:
     container_name: discovery-server
     ports:
       - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -14,9 +19,15 @@ services:
       - "8888:8888"
     depends_on:
       discovery-server:
-        condition: service_started
+        condition: service_healthy
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=classpath:/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -27,11 +38,17 @@ services:
       - "8080:8080"
     depends_on:
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -46,7 +63,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d stats" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stats"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -54,7 +71,7 @@ services:
       - app-network
 
   stats-server:
-    build: stats/stats-server
+    build: ./stats/stats-server
     container_name: stats-server
     ports:
       - "9090:9090"
@@ -62,14 +79,15 @@ services:
       stats-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
-      - DATASOURCE_USERNAME=stats
-      - DATASOURCE_PASSWORD=stats
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -84,7 +102,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d user" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d user"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -101,7 +119,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d category" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d category"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -118,7 +136,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d event" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d event"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -135,7 +153,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d request" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d request"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -152,7 +170,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d compilation" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d compilation"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -167,14 +185,15 @@ services:
       user-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - USER_DB_URL=jdbc:postgresql://user-db:5432/user
-      - USER_DB_USER=postgres
-      - USER_DB_PASSWORD=postgres
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://user-db:5432/user
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -185,14 +204,15 @@ services:
       category-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - CATEGORY_DB_URL=jdbc:postgresql://category-db:5432/category
-      - CATEGORY_DB_USER=postgres
-      - CATEGORY_DB_PASSWORD=postgres
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://category-db:5432/category
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -203,14 +223,15 @@ services:
       event-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - EVENT_DB_URL=jdbc:postgresql://event-db:5432/event
-      - EVENT_DB_USER=postgres
-      - EVENT_DB_PASSWORD=postgres
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://event-db:5432/event
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -221,14 +242,15 @@ services:
       request-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - REQUEST_DB_URL=jdbc:postgresql://request-db:5432/request
-      - REQUEST_DB_USER=postgres
-      - REQUEST_DB_PASSWORD=postgres
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://request-db:5432/request
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
@@ -239,14 +261,15 @@ services:
       compilation-db:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - COMPILATION_DB_URL=jdbc:postgresql://compilation-db:5432/compilation
-      - COMPILATION_DB_USER=postgres
-      - COMPILATION_DB_PASSWORD=postgres
-      - EUREKA_URL=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://compilation-db:5432/compilation
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     networks:
       - app-network
 
