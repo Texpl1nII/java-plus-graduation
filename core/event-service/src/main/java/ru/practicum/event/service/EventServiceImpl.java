@@ -373,11 +373,14 @@ public class EventServiceImpl implements EventService {
         return events.stream()
                 .map(event -> {
                     EventFullDto dto = eventMapper.toFullDto(event);
+
+                    // Устанавливаем статистику
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // ← ДОБАВИТЬ ЗАПОЛНЕНИЕ КАТЕГОРИИ
                     dto.setCategory(getCategoryById(event.getCategoryId()));
+
+                    dto.setInitiator(getUserById(event.getInitiatorId()));
 
                     return dto;
                 })
@@ -391,11 +394,16 @@ public class EventServiceImpl implements EventService {
         return events.stream()
                 .map(event -> {
                     EventShortDto dto = eventMapper.toShortDto(event);
+
+                    // Устанавливаем статистику
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // ← ДОБАВИТЬ ЗАПОЛНЕНИЕ КАТЕГОРИИ
+                    // Устанавливаем категорию (объект)
                     dto.setCategory(getCategoryById(event.getCategoryId()));
+
+                    // Устанавливаем инициатора (объект)
+                    dto.setInitiator(getUserById(event.getInitiatorId()));
 
                     return dto;
                 })
@@ -462,6 +470,18 @@ public class EventServiceImpl implements EventService {
             return categoryClient.getCategoryById(categoryId);
         } catch (Exception e) {
             log.error("Failed to get category with id: {}", categoryId, e);
+            return null;
+        }
+    }
+
+    private UserShortDto getUserById(Long userId) {
+        if (userId == null) return null;
+        try {
+            UserDto user = userClient.getUserById(userId);
+            // Создаем UserShortDto с id и name из UserDto
+            return new UserShortDto(user.getId(), user.getName());
+        } catch (Exception e) {
+            log.error("Failed to get user with id: {}", userId, e);
             return null;
         }
     }

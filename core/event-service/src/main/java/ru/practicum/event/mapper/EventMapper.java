@@ -15,7 +15,7 @@ public interface EventMapper {
     @Mapping(target = "publishedOn", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "initiatorId", ignore = true)
-    @Mapping(target = "categoryId", source = "categoryId")  // ← ОСТАЕТСЯ для entity
+    @Mapping(target = "categoryId", source = "categoryId")
     Event toEntity(NewEventDto newEventDto);
 
     @Mapping(target = "id", ignore = true)
@@ -23,17 +23,16 @@ public interface EventMapper {
 
     LocationDto toLocationDto(Location location);
 
-    // УБРАТЬ @Mapping для categoryId, так как теперь category - это объект
+    // Игнорируем все, что будем заполнять в сервисе
     @Mapping(target = "confirmedRequests", ignore = true)
     @Mapping(target = "views", ignore = true)
-    @Mapping(target = "category", ignore = true)  // ← ИГНОРИРУЕМ, заполним в сервисе
-    @Mapping(target = "initiatorId", source = "initiatorId")
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "initiator", ignore = true)
     EventFullDto toFullDto(Event event);
 
-    // Аналогично для ShortDto
     @Mapping(target = "confirmedRequests", ignore = true)
     @Mapping(target = "views", ignore = true)
-    @Mapping(target = "category", ignore = true)  // ← ИГНОРИРУЕМ
-    @Mapping(target = "initiatorId", source = "initiatorId")
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "initiator", ignore = true)
     EventShortDto toShortDto(Event event);
 }

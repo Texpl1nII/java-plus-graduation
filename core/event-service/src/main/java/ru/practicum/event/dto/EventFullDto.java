@@ -1,6 +1,7 @@
 package ru.practicum.event.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,9 +17,9 @@ public class EventFullDto {
     private String title;
     private String annotation;
     private String description;
-    private CategoryDto category;;           // ← вместо CategoryDto category
+    private CategoryDto category;      // объект
     private Boolean paid;
-    private Long initiatorId;           // ← вместо UserShortDto initiator
+    private UserShortDto initiator;    // объект
     private LocationDto location;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -36,4 +37,15 @@ public class EventFullDto {
 
     private Long confirmedRequests;
     private Long views;
+
+    // Геттеры для обратной совместимости
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Long getCategoryId() {
+        return category != null ? category.getId() : null;
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Long getInitiatorId() {
+        return initiator != null ? initiator.getId() : null;
+    }
 }
