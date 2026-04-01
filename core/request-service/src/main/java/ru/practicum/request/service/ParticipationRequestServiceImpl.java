@@ -16,6 +16,7 @@ import ru.practicum.request.enums.RequestStatus;
 import ru.practicum.request.mapper.ParticipationRequestMapper;
 import ru.practicum.request.model.ParticipationRequest;
 import ru.practicum.request.repository.ParticipationRequestRepository;
+import ru.practicum.request.exception.BadRequestException;
 import ru.practicum.request.exception.ConflictException;
 import ru.practicum.request.exception.DuplicatedException;
 import ru.practicum.request.exception.NotFoundException;
@@ -85,7 +86,9 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         }
 
         // Проверяем лимит участников
-        int confirmedCount = repository.findAllByEventIdAndStatus(eventId, RequestStatus.CONFIRMED).size();
+        Long confirmedCountLong = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+        int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
+
         if (event.getParticipantLimit() > 0 && confirmedCount >= event.getParticipantLimit()) {
             throw new ConflictException("Participant limit has been reached");
         }
@@ -132,6 +135,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConflictException("Cannot cancel another user's request");
         }
 
+        // Проверка: нельзя отменить уже подтвержденную заявку
+        if (request.getStatus() == RequestStatus.CONFIRMED) {
+            throw new ConflictException("Cannot cancel already confirmed request");
+        }
+
         request.setStatus(RequestStatus.CANCELED);
         ParticipationRequest saved = repository.save(request);
         log.info("Request cancelled: {}", saved);
@@ -161,6 +169,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
                                                               EventRequestStatusUpdateDto updateDto) {
         log.info("Changing request status: userId={}, eventId={}, updateDto={}", userId, eventId, updateDto);
 
+        // Валидация входных данных
+        if (updateDto == null || updateDto.getRequestIds() == null || updateDto.getRequestIds().isEmpty()) {
+            throw new BadRequestException("Request IDs cannot be empty");
+        }
+
         checkUserExists(userId);
         EventFullDto event = checkEventExists(eventId);
 
@@ -178,8 +191,16 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new NotFoundException("Some requests not found");
         }
 
-        int confirmedCount = repository.findAllByEventIdAndStatus(eventId, RequestStatus.CONFIRMED).size();
+        Long confirmedCountLong = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+        int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
         int availableSlots = event.getParticipantLimit() - confirmedCount;
+
+        // Проверка лимита до обработки
+        if (updateDto.getStatus() == RequestStatus.CONFIRMED &&
+                updateDto.getRequestIds().size() > availableSlots) {
+            throw new ConflictException("Not enough available slots. Available: " + availableSlots +
+                    ", Requested: " + updateDto.getRequestIds().size());
+        }
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
         List<ParticipationRequest> rejected = new ArrayList<>();
