@@ -239,10 +239,16 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
+    command: >
+      sh -c "
+      echo 'Waiting for category-db:5432...' &&
+      while ! nc -z category-db 5432; do sleep 2; done &&
+      echo 'category-db is ready!' &&
+      java -jar /app.jar
+      "
     networks:
       - app-network
 
