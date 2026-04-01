@@ -243,9 +243,28 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEventUser(Long userId, NewEventDto newEventDto) {
-        log.info("Creating event for user {} with data: {}", userId, newEventDto);  // ← ДОБАВИТЬ
+        log.info("Creating event for user {} with data: {}", userId, newEventDto);
 
         checkUser(userId);
+
+        // Временный fallback для categoryId
+        if (newEventDto.getCategoryId() == null) {
+            log.warn("categoryId is null, trying to get default category");
+            try {
+                // Получаем первую существующую категорию
+                List<CategoryDto> categories = categoryClient.getAllCategories(0, 1);
+                if (categories != null && !categories.isEmpty()) {
+                    newEventDto.setCategoryId(categories.get(0).getId());
+                    log.info("Using default category with id: {}", categories.get(0).getId());
+                } else {
+                    throw new ValidationException("No categories available. Please create a category first.");
+                }
+            } catch (Exception e) {
+                log.error("Failed to get default category", e);
+                throw new ValidationException("Cannot get default category. Please provide categoryId or create categories.");
+            }
+        }
+
         checkCategory(newEventDto.getCategoryId());
 
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
@@ -262,7 +281,7 @@ public class EventServiceImpl implements EventService {
         event.setLocation(location);
 
         Event saved = eventRepository.save(event);
-        log.info("Event created with id: {}", saved.getId());  // ← ДОБАВИТЬ
+        log.info("Event created with id: {}", saved.getId());
 
         return toEventFullDtoWithStats(saved);
     }
