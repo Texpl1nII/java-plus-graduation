@@ -23,16 +23,16 @@ public interface EventMapper {
 
     LocationDto toLocationDto(Location location);
 
-    // Игнорируем все, что будем заполнять в сервисе
+    // Убираем ignore для category и initiator
     @Mapping(target = "confirmedRequests", ignore = true)
     @Mapping(target = "views", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "initiator", ignore = true)
+    // @Mapping(target = "category", ignore = true)  // УДАЛИТЬ ЭТУ СТРОКУ
+    // @Mapping(target = "initiator", ignore = true) // УДАЛИТЬ ЭТУ СТРОКУ
     EventFullDto toFullDto(Event event);
 
     @Mapping(target = "confirmedRequests", ignore = true)
     @Mapping(target = "views", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "initiator", ignore = true)
+        // @Mapping(target = "category", ignore = true)  // УДАЛИТЬ ЭТУ СТРОКУ
+        // @Mapping(target = "initiator", ignore = true) // УДАЛИТЬ ЭТУ СТРОКУ
     EventShortDto toShortDto(Event event);
 }
