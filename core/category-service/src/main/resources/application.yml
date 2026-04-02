@@ -23,6 +23,15 @@ eureka:
   instance:
     instance-id: ${spring.application.name}:${random.value}
 
+feign:
+  httpclient:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+
 logging:
   level:
     ru.practicum: DEBUG
