@@ -1,18 +1,22 @@
 package ru.practicum.event.controller;
 
+import com.querydsl.core.BooleanBuilder;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-import ru.practicum.event.dto.EventAdminFilterParams;
-import ru.practicum.event.dto.EventFullDto;
-import ru.practicum.event.dto.UpdateEventAdminDto;
-import ru.practicum.event.service.EventService;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.event.dto.*;
+import ru.practicum.event.model.QEvent;
+import ru.practicum.event.model.Event;
+import ru.practicum.event.repository.EventRepository;
+import ru.practicum.event.service.EventService;
+import ru.practicum.event.mapper.EventMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/events")
@@ -22,6 +26,8 @@ import java.util.List;
 public class AdminEventController {
 
     private final EventService eventService;
+    private final EventRepository eventRepository;  // ← Добавить, если используешь прямой доступ
+    private final EventMapper eventMapper;          // ← Добавить, если используешь прямой доступ
 
     @GetMapping
     public List<EventFullDto> getEvents(@RequestParam(required = false) List<Long> users,
@@ -45,6 +51,15 @@ public class AdminEventController {
                 .build();
 
         return eventService.getEventsAdmin(params);
+    }
+
+    @GetMapping("/by-category/{categoryId}")
+    public List<EventShortDto> getEventsByCategoryId(@PathVariable Long categoryId) {
+        log.info("Get events by category id: {}", categoryId);
+        List<Event> events = eventRepository.findAllByCategoryId(categoryId);
+        return events.stream()
+                .map(eventMapper::toShortDto)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{eventId}")

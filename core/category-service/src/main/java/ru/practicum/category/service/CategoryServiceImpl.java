@@ -46,28 +46,23 @@ public class CategoryServiceImpl implements CategoryService {
     public void delete(Long catId) {
         log.info("Deleting category with id: {}", catId);
 
-        // Проверяем, существует ли категория
         Category category = getCategoryById(catId);
 
-        // Реальная проверка наличия событий через event-service
         try {
             List<EventShortDto> events = eventClient.getEventsByCategoryId(catId);
             if (events != null && !events.isEmpty()) {
-                log.warn("Cannot delete category {} because it has {} events", catId, events.size());
+                log.warn("Cannot delete category {} - has {} events", catId, events.size());
                 throw new ConflictException("Cannot delete category with existing events");
             }
-            // Если событий нет - удаляем
             categoryRepository.deleteById(catId);
             log.info("Category {} deleted successfully", catId);
+        } catch (FeignException.NotFound e) {
+            // 404 значит нет событий - можно удалять
+            categoryRepository.deleteById(catId);
+            log.info("Category {} deleted successfully (no events found)", catId);
         } catch (FeignException e) {
-            if (e.status() == 404) {
-                // Категория не используется в событиях (404 значит нет событий)
-                categoryRepository.deleteById(catId);
-                log.info("Category {} deleted successfully (no events found)", catId);
-            } else {
-                log.error("Error checking events for category {}: {}", catId, e.getMessage());
-                throw new ConflictException("Cannot delete category: " + e.getMessage());
-            }
+            log.error("Error checking events for category {}: status={}", catId, e.status());
+            throw new ConflictException("Cannot delete category: " + e.getMessage());
         }
     }
 

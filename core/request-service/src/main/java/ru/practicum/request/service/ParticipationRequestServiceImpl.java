@@ -197,7 +197,8 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         // Проверка лимита до обработки
         if (updateDto.getStatus() == RequestStatus.CONFIRMED &&
-                updateDto.getRequestIds().size() > availableSlots) {
+                updateDto.getRequestIds().size() > availableSlots && event.getParticipantLimit() > 0) {
+            log.warn("Not enough slots: available={}, requested={}", availableSlots, updateDto.getRequestIds().size());
             throw new ConflictException("Not enough available slots. Available: " + availableSlots +
                     ", Requested: " + updateDto.getRequestIds().size());
         }
@@ -207,6 +208,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         for (ParticipationRequest request : requests) {
             if (request.getStatus() != RequestStatus.PENDING) {
+                log.warn("Request {} is not PENDING, status={}", request.getId(), request.getStatus());
                 throw new ConflictException("Request status must be PENDING");
             }
 
@@ -215,13 +217,16 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
                     request.setStatus(RequestStatus.CONFIRMED);
                     confirmed.add(request);
                     availableSlots--;
+                    log.debug("Request {} confirmed, remaining slots: {}", request.getId(), availableSlots);
                 } else {
                     request.setStatus(RequestStatus.REJECTED);
                     rejected.add(request);
+                    log.debug("Request {} rejected (no slots)", request.getId());
                 }
             } else if (updateDto.getStatus() == RequestStatus.REJECTED) {
                 request.setStatus(RequestStatus.REJECTED);
                 rejected.add(request);
+                log.debug("Request {} rejected", request.getId());
             }
         }
 

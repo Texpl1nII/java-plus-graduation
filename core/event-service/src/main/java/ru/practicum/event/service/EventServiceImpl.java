@@ -9,6 +9,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatClient;
+import feign.FeignException;
+import ru.practicum.event.dto.CategoryDto;
+import java.util.Collections;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.client.CategoryClient;
@@ -151,40 +154,41 @@ public class EventServiceImpl implements EventService {
                     .or(qEvent.description.containsIgnoreCase(params.getText())));
         }
 
-        // ========== ИСПРАВЛЕННАЯ ФИЛЬТРАЦИЯ ПО КАТЕГОРИЯМ ==========
+        // ========== ИСПРАВЛЕНИЕ ДЛЯ КАТЕГОРИЙ (ОШИБКИ 1 и 6) ==========
         if (params.getCategories() != null && !params.getCategories().isEmpty()) {
             List<Long> validCategories = new ArrayList<>();
 
             for (Long catId : params.getCategories()) {
-                // Пропускаем null и 0 (несуществующие категории)
-                if (catId == null || catId == 0) {
+                // Проверяем, что категория не null и не 0
+                if (catId == null || catId <= 0) {
                     log.warn("Skipping invalid category id: {}", catId);
                     continue;
                 }
 
                 try {
-                    // Проверяем, существует ли категория
                     CategoryDto category = categoryClient.getCategoryById(catId);
-                    if (category != null) {
+                    if (category != null && category.getId() != null) {
                         validCategories.add(catId);
                         log.debug("Category {} is valid, adding to filter", catId);
                     }
+                } catch (FeignException.NotFound e) {
+                    log.warn("Category {} not found, skipping", catId);
+                    // Пропускаем несуществующую категорию
                 } catch (Exception e) {
-                    log.warn("Category {} not found, excluding from filter: {}", catId, e.getMessage());
-                    // Категория не найдена - пропускаем её
+                    log.warn("Error checking category {}: {}", catId, e.getMessage());
                 }
             }
 
-            if (!validCategories.isEmpty()) {
-                builder.and(qEvent.categoryId.in(validCategories));
-                log.info("Filtering by valid categories: {}", validCategories);
-            } else {
-                // Если все категории несуществующие - возвращаем пустой результат
-                log.warn("All requested categories are invalid (null, 0, or not found), returning empty list");
+            if (validCategories.isEmpty()) {
+                // Если все категории невалидны - возвращаем пустой результат
+                log.info("No valid categories found, returning empty list");
                 return Collections.emptyList();
             }
+
+            builder.and(qEvent.categoryId.in(validCategories));
+            log.info("Filtering by valid categories: {}", validCategories);
         }
-        // ===========================================================
+        // ===============================================================
 
         if (params.getPaid() != null) {
             builder.and(qEvent.paid.eq(params.getPaid()));
