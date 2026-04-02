@@ -30,11 +30,11 @@ public class EventRequestController {
         return requestService.getEventRequests(userId, eventId);
     }
 
-    @PatchMapping
+    @PostMapping
     public EventRequestStatusUpdateResult changeRequestStatus(@PathVariable @Positive Long userId,
                                                               @PathVariable @Positive Long eventId,
                                                               @Valid @RequestBody EventRequestStatusUpdateDto updateDto) {
-        log.info("PATCH: Изменение статуса заявок userId={}, eventId={}, updateDto={}", userId, eventId, updateDto);
+        log.info("POST: Изменение статуса заявок userId={}, eventId={}, updateDto={}", userId, eventId, updateDto);
         return requestService.changeRequestStatus(userId, eventId, updateDto);
     }
 }

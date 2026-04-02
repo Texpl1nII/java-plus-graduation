@@ -18,7 +18,8 @@ public interface RequestClient {
     List<ParticipationRequestDto> getEventRequests(@PathVariable("userId") Long userId,
                                                    @PathVariable("eventId") Long eventId);
 
-    @PatchMapping("/users/{userId}/events/{eventId}/requests")
+    // ИЗМЕНИТЬ С @PatchMapping НА @PostMapping
+    @PostMapping("/users/{userId}/events/{eventId}/requests")
     EventRequestStatusUpdateResult changeRequestStatus(@PathVariable("userId") Long userId,
                                                        @PathVariable("eventId") Long eventId,
                                                        @RequestBody EventRequestStatusUpdateDto request);

@@ -144,6 +144,18 @@ public class EventServiceImpl implements EventService {
 
         sendStat(params.getRequest());
 
+        // ========== ДОБАВИТЬ ЛОГИРОВАНИЕ ВСЕХ ПАРАМЕТРОВ ==========
+        log.info("=== getEventsPublic START ===");
+        log.info("text={}", params.getText());
+        log.info("categories={}", params.getCategories());
+        log.info("paid={}", params.getPaid());
+        log.info("rangeStart={}", params.getRangeStart());
+        log.info("rangeEnd={}", params.getRangeEnd());
+        log.info("onlyAvailable={}", params.getOnlyAvailable());
+        log.info("sort={}", params.getSort());
+        log.info("from={}, size={}", params.getFrom(), params.getSize());
+        // ========================================================
+
         BooleanBuilder builder = new BooleanBuilder();
         QEvent qEvent = QEvent.event;
 
@@ -154,12 +166,10 @@ public class EventServiceImpl implements EventService {
                     .or(qEvent.description.containsIgnoreCase(params.getText())));
         }
 
-        // ========== ИСПРАВЛЕНИЕ ДЛЯ КАТЕГОРИЙ (ОШИБКИ 1 и 6) ==========
         if (params.getCategories() != null && !params.getCategories().isEmpty()) {
             List<Long> validCategories = new ArrayList<>();
 
             for (Long catId : params.getCategories()) {
-                // Проверяем, что категория не null и не 0
                 if (catId == null || catId <= 0) {
                     log.warn("Skipping invalid category id: {}", catId);
                     continue;
@@ -173,14 +183,12 @@ public class EventServiceImpl implements EventService {
                     }
                 } catch (FeignException.NotFound e) {
                     log.warn("Category {} not found, skipping", catId);
-                    // Пропускаем несуществующую категорию
                 } catch (Exception e) {
                     log.warn("Error checking category {}: {}", catId, e.getMessage());
                 }
             }
 
             if (validCategories.isEmpty()) {
-                // Если все категории невалидны - возвращаем пустой результат
                 log.info("No valid categories found, returning empty list");
                 return Collections.emptyList();
             }
@@ -188,18 +196,46 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.categoryId.in(validCategories));
             log.info("Filtering by valid categories: {}", validCategories);
         }
-        // ===============================================================
 
         if (params.getPaid() != null) {
             builder.and(qEvent.paid.eq(params.getPaid()));
         }
 
-        LocalDateTime start = (params.getRangeStart() != null) ? parseTime(params.getRangeStart()) : LocalDateTime.now();
-        LocalDateTime end = (params.getRangeEnd() != null) ? parseTime(params.getRangeEnd()) : null;
+        // ========== ДОБАВИТЬ ПОДРОБНОЕ ЛОГИРОВАНИЕ ДЛЯ ДАТ ==========
+        log.info("=== DATE PARSING ===");
+        log.info("Raw rangeStart: '{}'", params.getRangeStart());
+        log.info("Raw rangeEnd: '{}'", params.getRangeEnd());
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        try {
+            if (params.getRangeStart() != null && !params.getRangeStart().isBlank()) {
+                // Декодируем URL-encoded строку (%20 -> пробел)
+                String decodedStart = params.getRangeStart().replace("%20", " ");
+                log.info("Decoded rangeStart: '{}'", decodedStart);
+                start = LocalDateTime.parse(decodedStart, FORMATTER);
+            } else {
+                start = LocalDateTime.now();
+            }
+
+            if (params.getRangeEnd() != null && !params.getRangeEnd().isBlank()) {
+                String decodedEnd = params.getRangeEnd().replace("%20", " ");
+                log.info("Decoded rangeEnd: '{}'", decodedEnd);
+                end = LocalDateTime.parse(decodedEnd, FORMATTER);
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse dates: {}", e.getMessage(), e);
+            throw new ValidationException("Invalid date format. Expected: yyyy-MM-dd HH:mm:ss");
+        }
+
+        log.info("Parsed dates: start={}, end={}", start, end);
 
         if (end != null && start.isAfter(end)) {
+            log.warn("Validation failed: start={} is after end={}", start, end);
             throw new ValidationException("Start date must be before end date");
         }
+        // ============================================================
 
         builder.and(qEvent.eventDate.goe(start));
         if (end != null) {
