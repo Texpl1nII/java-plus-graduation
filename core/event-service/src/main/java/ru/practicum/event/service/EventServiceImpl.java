@@ -150,9 +150,42 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.annotation.containsIgnoreCase(params.getText())
                     .or(qEvent.description.containsIgnoreCase(params.getText())));
         }
+
+        // ========== ИСПРАВЛЕННАЯ ФИЛЬТРАЦИЯ ПО КАТЕГОРИЯМ ==========
         if (params.getCategories() != null && !params.getCategories().isEmpty()) {
-            builder.and(qEvent.categoryId.in(params.getCategories()));
+            List<Long> validCategories = new ArrayList<>();
+
+            for (Long catId : params.getCategories()) {
+                // Пропускаем null и 0 (несуществующие категории)
+                if (catId == null || catId == 0) {
+                    log.warn("Skipping invalid category id: {}", catId);
+                    continue;
+                }
+
+                try {
+                    // Проверяем, существует ли категория
+                    CategoryDto category = categoryClient.getCategoryById(catId);
+                    if (category != null) {
+                        validCategories.add(catId);
+                        log.debug("Category {} is valid, adding to filter", catId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Category {} not found, excluding from filter: {}", catId, e.getMessage());
+                    // Категория не найдена - пропускаем её
+                }
+            }
+
+            if (!validCategories.isEmpty()) {
+                builder.and(qEvent.categoryId.in(validCategories));
+                log.info("Filtering by valid categories: {}", validCategories);
+            } else {
+                // Если все категории несуществующие - возвращаем пустой результат
+                log.warn("All requested categories are invalid (null, 0, or not found), returning empty list");
+                return Collections.emptyList();
+            }
         }
+        // ===========================================================
+
         if (params.getPaid() != null) {
             builder.and(qEvent.paid.eq(params.getPaid()));
         }
@@ -331,8 +364,17 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventRequestStatusUpdateResult changeRequestStatus(Long userId, Long eventId, EventRequestStatusUpdateDto request) {
+        log.info("Changing request status: userId={}, eventId={}, request={}", userId, eventId, request);
         checkUser(userId);
-        return requestClient.changeRequestStatus(userId, eventId, request);
+        try {
+            return requestClient.changeRequestStatus(userId, eventId, request);
+        } catch (feign.FeignException e) {
+            log.error("Feign error while changing request status: status={}, message={}", e.status(), e.getMessage());
+            if (e.status() == 409) {
+                throw new ConflictException(e.getMessage());
+            }
+            throw e;
+        }
     }
 
     private Event updateEvent(Event event, BaseUpdateEventDto request) {
@@ -484,5 +526,12 @@ public class EventServiceImpl implements EventService {
             log.error("Failed to get user with id: {}", userId, e);
             return null;
         }
+    }
+
+    @Override
+    public List<EventShortDto> getEventsByCategoryId(Long categoryId) {
+        log.info("Getting events by category id: {}", categoryId);
+        List<Event> events = eventRepository.findAllByCategoryId(categoryId);
+        return makeEventShortDtoList(events);
     }
 }

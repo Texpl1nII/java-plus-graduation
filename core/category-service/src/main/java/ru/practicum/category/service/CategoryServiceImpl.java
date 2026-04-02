@@ -6,14 +6,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.category.client.EventClient;
 import ru.practicum.category.dto.CategoryDto;
+import ru.practicum.category.dto.EventShortDto;
 import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.exception.ConflictException;
 import ru.practicum.category.exception.NotFoundException;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
-
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final EventClient eventClient;  // ← ДОБАВИТЬ
 
     @Override
     public CategoryDto create(NewCategoryDto newCategoryDto) {
@@ -42,19 +44,29 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void delete(Long catId) {
+        log.info("Deleting category with id: {}", catId);
+
+        // Проверяем, существует ли категория
         Category category = getCategoryById(catId);
 
-        // Проверяем, есть ли события у категории
+        // Реальная проверка наличия событий через event-service
         try {
-            // Здесь должен быть вызов к event-service для проверки наличия событий
-            // Пока временно выбрасываем исключение для теста
-            throw new ConflictException("Cannot delete category with existing events");
+            List<EventShortDto> events = eventClient.getEventsByCategoryId(catId);
+            if (events != null && !events.isEmpty()) {
+                log.warn("Cannot delete category {} because it has {} events", catId, events.size());
+                throw new ConflictException("Cannot delete category with existing events");
+            }
+            // Если событий нет - удаляем
+            categoryRepository.deleteById(catId);
+            log.info("Category {} deleted successfully", catId);
         } catch (FeignException e) {
             if (e.status() == 404) {
-                // Нет событий, можно удалять
+                // Категория не используется в событиях (404 значит нет событий)
                 categoryRepository.deleteById(catId);
+                log.info("Category {} deleted successfully (no events found)", catId);
             } else {
-                throw new ConflictException("Cannot delete category with existing events");
+                log.error("Error checking events for category {}: {}", catId, e.getMessage());
+                throw new ConflictException("Cannot delete category: " + e.getMessage());
             }
         }
     }
@@ -64,7 +76,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryDto update(Long catId, CategoryDto categoryDto) {
         Category category = getCategoryById(catId);
 
-        // Проверяем, что новое имя не занято другим категорией
+        // Проверяем, что новое имя не занято другой категорией
         if (!category.getName().equals(categoryDto.getName())
                 && categoryRepository.existsByName(categoryDto.getName())) {
             throw new ConflictException("Category with this name already exists");

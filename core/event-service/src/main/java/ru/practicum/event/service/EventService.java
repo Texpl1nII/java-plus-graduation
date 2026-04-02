@@ -6,6 +6,9 @@ import ru.practicum.event.dto.*;
 import java.util.List;
 
 public interface EventService {
+
+    List<EventShortDto> getEventsByIds(List<Long> ids);
+
     List<EventFullDto> getEventsAdmin(EventAdminFilterParams params);
 
     EventFullDto updateEventAdmin(Long eventId, UpdateEventAdminDto request);
@@ -28,5 +31,5 @@ public interface EventService {
 
     EventFullDto getEventById(Long eventId);
 
-    List<EventShortDto> getEventsByIds(List<Long> ids);
+    List<EventShortDto> getEventsByCategoryId(Long categoryId);
 }
