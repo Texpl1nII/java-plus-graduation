@@ -27,6 +27,7 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.event.exception.ConflictException;
 import ru.practicum.event.exception.NotFoundException;
 import ru.practicum.event.exception.ValidationException;
+import java.util.Comparator;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -144,7 +145,44 @@ public class EventServiceImpl implements EventService {
 
         sendStat(params.getRequest());
 
-        // ========== ДОБАВИТЬ ЛОГИРОВАНИЕ ВСЕХ ПАРАМЕТРОВ ==========
+        log.info("=== DATE PARSING ===");
+        log.info("Raw rangeStart: '{}'", params.getRangeStart());
+        log.info("Raw rangeEnd: '{}'", params.getRangeEnd());
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        try {
+            if (params.getRangeStart() != null && !params.getRangeStart().isBlank()) {
+                String decodedStart = decodeUrl(params.getRangeStart());
+                log.info("Decoded rangeStart: '{}'", decodedStart);
+                start = LocalDateTime.parse(decodedStart, FORMATTER);
+            } else {
+                start = LocalDateTime.now();
+            }
+
+            if (params.getRangeEnd() != null && !params.getRangeEnd().isBlank()) {
+                String decodedEnd = decodeUrl(params.getRangeEnd());
+                log.info("Decoded rangeEnd: '{}'", decodedEnd);
+                end = LocalDateTime.parse(decodedEnd, FORMATTER);
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse dates: {}", e.getMessage(), e);
+            throw new ValidationException("Invalid date format. Expected: yyyy-MM-dd HH:mm:ss");
+        }
+
+        log.info("Parsed dates: start={}, end={}", start, end);
+
+        // ВАЛИДАЦИЯ: start должен быть раньше end (если оба указаны)
+        if (params.getRangeStart() != null && params.getRangeEnd() != null) {
+            if (start != null && end != null && start.isAfter(end)) {
+                log.warn("Validation failed: start={} is after end={}", start, end);
+                throw new ValidationException("Start date must be before end date");
+            }
+        }
+        // ========================================================
+
+        // ========== 2. ЛОГИРОВАНИЕ ВСЕХ ПАРАМЕТРОВ ==========
         log.info("=== getEventsPublic START ===");
         log.info("text={}", params.getText());
         log.info("categories={}", params.getCategories());
@@ -201,44 +239,6 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.paid.eq(params.getPaid()));
         }
 
-        // ========== ИСПРАВЛЕННОЕ ПАРСИНГ ДАТ ==========
-        log.info("=== DATE PARSING ===");
-        log.info("Raw rangeStart: '{}'", params.getRangeStart());
-        log.info("Raw rangeEnd: '{}'", params.getRangeEnd());
-
-        LocalDateTime start = null;
-        LocalDateTime end = null;
-
-        try {
-            if (params.getRangeStart() != null && !params.getRangeStart().isBlank()) {
-                String decodedStart = decodeUrl(params.getRangeStart());
-                log.info("Decoded rangeStart: '{}'", decodedStart);
-                start = LocalDateTime.parse(decodedStart, FORMATTER);
-            } else {
-                start = LocalDateTime.now();
-            }
-
-            if (params.getRangeEnd() != null && !params.getRangeEnd().isBlank()) {
-                String decodedEnd = decodeUrl(params.getRangeEnd());
-                log.info("Decoded rangeEnd: '{}'", decodedEnd);
-                end = LocalDateTime.parse(decodedEnd, FORMATTER);
-            }
-        } catch (Exception e) {
-            log.error("Failed to parse dates: {}", e.getMessage(), e);
-            throw new ValidationException("Invalid date format. Expected: yyyy-MM-dd HH:mm:ss");
-        }
-
-        log.info("Parsed dates: start={}, end={}", start, end);
-
-        // Ранняя валидация дат
-        if (params.getRangeStart() != null && params.getRangeEnd() != null) {
-            if (start != null && end != null && start.isAfter(end)) {
-                log.warn("Validation failed: start={} is after end={}", start, end);
-                throw new ValidationException("Start date must be before end date");
-            }
-        }
-        // ============================================
-
         builder.and(qEvent.eventDate.goe(start));
         if (end != null) {
             builder.and(qEvent.eventDate.loe(end));
@@ -293,12 +293,6 @@ public class EventServiceImpl implements EventService {
         }
 
         return result;
-    }
-
-    // ========== НОВЫЙ МЕТОД ДЛЯ ДЕКОДИРОВАНИЯ URL ==========
-    private String decodeUrl(String input) {
-        if (input == null) return null;
-        return input.replace("%20", " ").replace("%3A", ":");
     }
     // ====================================================
 
@@ -493,6 +487,10 @@ public class EventServiceImpl implements EventService {
     }
 
     private List<EventShortDto> makeEventShortDtoList(List<Event> events) {
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         Map<Long, Long> views = getViews(events);
         Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
 
@@ -503,21 +501,39 @@ public class EventServiceImpl implements EventService {
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // Исправлено: категория не должна быть null
-                    CategoryDto category = getCategoryById(event.getCategoryId());
-                    if (category == null) {
+                    // ДОБАВИТЬ ПРОВЕРКУ НА null ДЛЯ event.getCategoryId()
+                    Long categoryId = event.getCategoryId();
+                    CategoryDto category;
+                    if (categoryId == null) {
+                        log.warn("Event {} has null categoryId", event.getId());
                         category = new CategoryDto();
-                        category.setId(event.getCategoryId());
+                        category.setId(0L);
                         category.setName("Unknown Category");
+                    } else {
+                        category = getCategoryById(categoryId);
+                        if (category == null) {
+                            category = new CategoryDto();
+                            category.setId(categoryId);
+                            category.setName("Unknown Category");
+                        }
                     }
                     dto.setCategory(category);
 
-                    // Исправлено: инициатор не должен быть null
-                    UserShortDto initiator = getUserById(event.getInitiatorId());
-                    if (initiator == null) {
+                    // Аналогично для инициатора
+                    Long initiatorId = event.getInitiatorId();
+                    UserShortDto initiator;
+                    if (initiatorId == null) {
+                        log.warn("Event {} has null initiatorId", event.getId());
                         initiator = new UserShortDto();
-                        initiator.setId(event.getInitiatorId());
+                        initiator.setId(0L);
                         initiator.setName("Unknown User");
+                    } else {
+                        initiator = getUserById(initiatorId);
+                        if (initiator == null) {
+                            initiator = new UserShortDto();
+                            initiator.setId(initiatorId);
+                            initiator.setName("Unknown User");
+                        }
                     }
                     dto.setInitiator(initiator);
 
@@ -582,19 +598,25 @@ public class EventServiceImpl implements EventService {
 
     // ========== ИСПРАВЛЕННЫЙ МЕТОД getCategoryById ==========
     private CategoryDto getCategoryById(Long categoryId) {
-        if (categoryId == null) return null;
+        // ДОБАВИТЬ: если categoryId == null, сразу вернуть заглушку
+        if (categoryId == null) {
+            log.warn("Category ID is null, returning default category");
+            CategoryDto defaultCategory = new CategoryDto();
+            defaultCategory.setId(0L);
+            defaultCategory.setName("Unknown Category");
+            return defaultCategory;
+        }
+
         try {
             return categoryClient.getCategoryById(categoryId);
         } catch (FeignException.NotFound e) {
             log.warn("Category with id {} not found", categoryId);
-            // Возвращаем заглушку вместо null
             CategoryDto defaultCategory = new CategoryDto();
             defaultCategory.setId(categoryId);
             defaultCategory.setName("Unknown Category");
             return defaultCategory;
         } catch (Exception e) {
             log.error("Failed to get category with id: {}", categoryId, e);
-            // Возвращаем заглушку вместо null
             CategoryDto defaultCategory = new CategoryDto();
             defaultCategory.setId(categoryId);
             defaultCategory.setName("Unknown Category");
@@ -630,5 +652,10 @@ public class EventServiceImpl implements EventService {
         log.info("Getting events by category id: {}", categoryId);
         List<Event> events = eventRepository.findAllByCategoryId(categoryId);
         return makeEventShortDtoList(events);
+    }
+
+    private String decodeUrl(String input) {
+        if (input == null) return null;
+        return input.replace("%20", " ").replace("%3A", ":");
     }
 }
