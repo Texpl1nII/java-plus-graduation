@@ -145,6 +145,7 @@ public class EventServiceImpl implements EventService {
 
         sendStat(params.getRequest());
 
+        // ========== 1. СНАЧАЛА ПАРСИНГ И ВАЛИДАЦИЯ ДАТ ==========
         log.info("=== DATE PARSING ===");
         log.info("Raw rangeStart: '{}'", params.getRangeStart());
         log.info("Raw rangeEnd: '{}'", params.getRangeEnd());
@@ -250,6 +251,7 @@ public class EventServiceImpl implements EventService {
 
         Sort sortOrder = Sort.by(Sort.Direction.ASC, "eventDate");
 
+        // ========== ВЕТКА СОРТИРОВКИ ПО VIEWS (ИСПРАВЛЕНА) ==========
         if ("VIEWS".equals(params.getSort())) {
             List<Event> events = StreamSupport.stream(eventRepository.findAll(builder).spliterator(), false)
                     .collect(Collectors.toList());
@@ -262,6 +264,44 @@ public class EventServiceImpl implements EventService {
                 EventShortDto dto = eventMapper.toShortDto(event);
                 dto.setViews(views.getOrDefault(event.getId(), 0L));
                 dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
+
+                // ========== ЗАПОЛНЯЕМ CATEGORY (как в makeEventShortDtoList) ==========
+                Long categoryId = event.getCategoryId();
+                CategoryDto category;
+                if (categoryId == null) {
+                    log.warn("Event {} has null categoryId", event.getId());
+                    category = new CategoryDto();
+                    category.setId(0L);
+                    category.setName("Unknown Category");
+                } else {
+                    category = getCategoryById(categoryId);
+                    if (category == null) {
+                        category = new CategoryDto();
+                        category.setId(categoryId);
+                        category.setName("Unknown Category");
+                    }
+                }
+                dto.setCategory(category);
+
+                // ========== ЗАПОЛНЯЕМ INITIATOR ==========
+                Long initiatorId = event.getInitiatorId();
+                UserShortDto initiator;
+                if (initiatorId == null) {
+                    log.warn("Event {} has null initiatorId", event.getId());
+                    initiator = new UserShortDto();
+                    initiator.setId(0L);
+                    initiator.setName("Unknown User");
+                } else {
+                    initiator = getUserById(initiatorId);
+                    if (initiator == null) {
+                        initiator = new UserShortDto();
+                        initiator.setId(initiatorId);
+                        initiator.setName("Unknown User");
+                    }
+                }
+                dto.setInitiator(initiator);
+                // ============================================
+
                 result.add(dto);
             }
 
@@ -277,22 +317,13 @@ public class EventServiceImpl implements EventService {
 
             return result.subList(from, toIndex);
         }
+        // =======================================================
 
         PageRequest pageRequest = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), sortOrder);
         List<Event> events = eventRepository.findAll(builder, pageRequest).getContent();
 
-        Map<Long, Long> views = getViews(events);
-        Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
-        List<EventShortDto> result = new ArrayList<>();
-
-        for (Event event : events) {
-            EventShortDto dto = eventMapper.toShortDto(event);
-            dto.setViews(views.getOrDefault(event.getId(), 0L));
-            dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
-            result.add(dto);
-        }
-
-        return result;
+        // ========== ИСПОЛЬЗУЕМ makeEventShortDtoList ДЛЯ ОБЫЧНОЙ СОРТИРОВКИ ==========
+        return makeEventShortDtoList(events);
     }
     // ====================================================
 
