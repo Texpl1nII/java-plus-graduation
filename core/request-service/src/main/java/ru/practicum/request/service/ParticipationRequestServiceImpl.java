@@ -198,7 +198,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         // Проверка лимита до обработки
         if (updateDto.getStatus() == RequestStatus.CONFIRMED &&
                 updateDto.getRequestIds().size() > availableSlots && event.getParticipantLimit() > 0) {
-            log.warn("Not enough slots: available={}, requested={}", availableSlots, updateDto.getRequestIds().size());
             throw new ConflictException("Not enough available slots. Available: " + availableSlots +
                     ", Requested: " + updateDto.getRequestIds().size());
         }
