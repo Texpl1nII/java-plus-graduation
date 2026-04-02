@@ -201,7 +201,7 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.paid.eq(params.getPaid()));
         }
 
-        // ========== ДОБАВИТЬ ПОДРОБНОЕ ЛОГИРОВАНИЕ ДЛЯ ДАТ ==========
+        // ========== ИСПРАВЛЕННОЕ ПАРСИНГ ДАТ ==========
         log.info("=== DATE PARSING ===");
         log.info("Raw rangeStart: '{}'", params.getRangeStart());
         log.info("Raw rangeEnd: '{}'", params.getRangeEnd());
@@ -211,8 +211,7 @@ public class EventServiceImpl implements EventService {
 
         try {
             if (params.getRangeStart() != null && !params.getRangeStart().isBlank()) {
-                // Декодируем URL-encoded строку (%20 -> пробел)
-                String decodedStart = params.getRangeStart().replace("%20", " ");
+                String decodedStart = decodeUrl(params.getRangeStart());
                 log.info("Decoded rangeStart: '{}'", decodedStart);
                 start = LocalDateTime.parse(decodedStart, FORMATTER);
             } else {
@@ -220,7 +219,7 @@ public class EventServiceImpl implements EventService {
             }
 
             if (params.getRangeEnd() != null && !params.getRangeEnd().isBlank()) {
-                String decodedEnd = params.getRangeEnd().replace("%20", " ");
+                String decodedEnd = decodeUrl(params.getRangeEnd());
                 log.info("Decoded rangeEnd: '{}'", decodedEnd);
                 end = LocalDateTime.parse(decodedEnd, FORMATTER);
             }
@@ -231,11 +230,14 @@ public class EventServiceImpl implements EventService {
 
         log.info("Parsed dates: start={}, end={}", start, end);
 
-        if (end != null && start.isAfter(end)) {
-            log.warn("Validation failed: start={} is after end={}", start, end);
-            throw new ValidationException("Start date must be before end date");
+        // Ранняя валидация дат
+        if (params.getRangeStart() != null && params.getRangeEnd() != null) {
+            if (start != null && end != null && start.isAfter(end)) {
+                log.warn("Validation failed: start={} is after end={}", start, end);
+                throw new ValidationException("Start date must be before end date");
+            }
         }
-        // ============================================================
+        // ============================================
 
         builder.and(qEvent.eventDate.goe(start));
         if (end != null) {
@@ -293,6 +295,13 @@ public class EventServiceImpl implements EventService {
         return result;
     }
 
+    // ========== НОВЫЙ МЕТОД ДЛЯ ДЕКОДИРОВАНИЯ URL ==========
+    private String decodeUrl(String input) {
+        if (input == null) return null;
+        return input.replace("%20", " ").replace("%3A", ":");
+    }
+    // ====================================================
+
     @Override
     public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
         Event event = getEventByIdOrThrow(id);
@@ -324,7 +333,6 @@ public class EventServiceImpl implements EventService {
         if (newEventDto.getCategoryId() == null) {
             log.warn("categoryId is null, trying to get default category");
             try {
-                // Получаем первую существующую категорию
                 List<CategoryDto> categories = categoryClient.getAllCategories(0, 1);
                 if (categories != null && !categories.isEmpty()) {
                     newEventDto.setCategoryId(categories.get(0).getId());
@@ -422,7 +430,7 @@ public class EventServiceImpl implements EventService {
         if (request.getAnnotation() != null) event.setAnnotation(request.getAnnotation());
         if (request.getDescription() != null) event.setDescription(request.getDescription());
         if (request.getEventDate() != null) event.setEventDate(request.getEventDate());
-        if (request.getCategoryId() != null) {  // ← ИСПРАВЛЕНО: getCategory() → getCategoryId()
+        if (request.getCategoryId() != null) {
             event.setCategoryId(request.getCategoryId());
         }
         if (request.getLocation() != null) {
@@ -436,7 +444,9 @@ public class EventServiceImpl implements EventService {
     }
 
     private LocalDateTime parseTime(String time) {
-        return LocalDateTime.parse(time, FORMATTER);
+        if (time == null) return null;
+        String decoded = decodeUrl(time);
+        return LocalDateTime.parse(decoded, FORMATTER);
     }
 
     private void sendStat(HttpServletRequest request) {
@@ -456,13 +466,26 @@ public class EventServiceImpl implements EventService {
                 .map(event -> {
                     EventFullDto dto = eventMapper.toFullDto(event);
 
-                    // Устанавливаем статистику
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    dto.setCategory(getCategoryById(event.getCategoryId()));
+                    // Исправлено: категория не должна быть null
+                    CategoryDto category = getCategoryById(event.getCategoryId());
+                    if (category == null) {
+                        category = new CategoryDto();
+                        category.setId(event.getCategoryId());
+                        category.setName("Unknown Category");
+                    }
+                    dto.setCategory(category);
 
-                    dto.setInitiator(getUserById(event.getInitiatorId()));
+                    // Исправлено: инициатор не должен быть null
+                    UserShortDto initiator = getUserById(event.getInitiatorId());
+                    if (initiator == null) {
+                        initiator = new UserShortDto();
+                        initiator.setId(event.getInitiatorId());
+                        initiator.setName("Unknown User");
+                    }
+                    dto.setInitiator(initiator);
 
                     return dto;
                 })
@@ -477,15 +500,26 @@ public class EventServiceImpl implements EventService {
                 .map(event -> {
                     EventShortDto dto = eventMapper.toShortDto(event);
 
-                    // Устанавливаем статистику
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // Устанавливаем категорию (объект)
-                    dto.setCategory(getCategoryById(event.getCategoryId()));
+                    // Исправлено: категория не должна быть null
+                    CategoryDto category = getCategoryById(event.getCategoryId());
+                    if (category == null) {
+                        category = new CategoryDto();
+                        category.setId(event.getCategoryId());
+                        category.setName("Unknown Category");
+                    }
+                    dto.setCategory(category);
 
-                    // Устанавливаем инициатора (объект)
-                    dto.setInitiator(getUserById(event.getInitiatorId()));
+                    // Исправлено: инициатор не должен быть null
+                    UserShortDto initiator = getUserById(event.getInitiatorId());
+                    if (initiator == null) {
+                        initiator = new UserShortDto();
+                        initiator.setId(event.getInitiatorId());
+                        initiator.setName("Unknown User");
+                    }
+                    dto.setInitiator(initiator);
 
                     return dto;
                 })
@@ -546,27 +580,50 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
     }
 
+    // ========== ИСПРАВЛЕННЫЙ МЕТОД getCategoryById ==========
     private CategoryDto getCategoryById(Long categoryId) {
         if (categoryId == null) return null;
         try {
             return categoryClient.getCategoryById(categoryId);
+        } catch (FeignException.NotFound e) {
+            log.warn("Category with id {} not found", categoryId);
+            // Возвращаем заглушку вместо null
+            CategoryDto defaultCategory = new CategoryDto();
+            defaultCategory.setId(categoryId);
+            defaultCategory.setName("Unknown Category");
+            return defaultCategory;
         } catch (Exception e) {
             log.error("Failed to get category with id: {}", categoryId, e);
-            return null;
+            // Возвращаем заглушку вместо null
+            CategoryDto defaultCategory = new CategoryDto();
+            defaultCategory.setId(categoryId);
+            defaultCategory.setName("Unknown Category");
+            return defaultCategory;
         }
     }
+    // ========================================================
 
+    // ========== ИСПРАВЛЕННЫЙ МЕТОД getUserById ==========
     private UserShortDto getUserById(Long userId) {
         if (userId == null) return null;
         try {
             UserDto user = userClient.getUserById(userId);
-            // Создаем UserShortDto с id и name из UserDto
             return new UserShortDto(user.getId(), user.getName());
+        } catch (FeignException.NotFound e) {
+            log.warn("User with id {} not found", userId);
+            UserShortDto defaultUser = new UserShortDto();
+            defaultUser.setId(userId);
+            defaultUser.setName("Unknown User");
+            return defaultUser;
         } catch (Exception e) {
             log.error("Failed to get user with id: {}", userId, e);
-            return null;
+            UserShortDto defaultUser = new UserShortDto();
+            defaultUser.setId(userId);
+            defaultUser.setName("Unknown User");
+            return defaultUser;
         }
     }
+    // ====================================================
 
     @Override
     public List<EventShortDto> getEventsByCategoryId(Long categoryId) {
