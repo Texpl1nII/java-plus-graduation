@@ -8,23 +8,20 @@ spring:
   cloud:
     gateway:
       routes:
-        # ✅ 1. СНАЧАЛА request-service (более специфичный)
         - id: request-service
           uri: lb://request-service
           predicates:
             - Path=/users/*/requests**, /admin/events/*/requests/**
 
-        # ✅ 2. ПОТОМ user-service
         - id: user-service
           uri: lb://user-service
           predicates:
             - Path=/admin/users/**, /users/**
 
-        # ✅ 3. ПОТОМ event-service (более общий)
         - id: event-service
           uri: lb://event-service
           predicates:
-            - Path=/events/**, /admin/events/**, /users/**/events/**
+            - Path=/events/**, /admin/events/**, /users/*/events/**   # ← ИСПРАВЛЕНО: /users/*/events/** вместо /users/**/events/**
 
         - id: category-service
           uri: lb://category-service
