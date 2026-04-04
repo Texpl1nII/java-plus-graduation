@@ -12,26 +12,37 @@ spring:
           uri: lb://event-service
           predicates:
             - Path=/events/**, /admin/events/**, /users/**
+
         - id: category-service
           uri: lb://category-service
           predicates:
-            - Path=/categories/**
+            - Path=/categories/**, /admin/categories/**  # ✅ ДОБАВЛЕН /admin/categories/**
+
+        - id: compilation-service  # ✅ ДОБАВЛЕН НОВЫЙ РОУТ
+          uri: lb://compilation-service
+          predicates:
+            - Path=/compilations/**, /admin/compilations/**
+
         - id: user-service
           uri: lb://user-service
           predicates:
             - Path=/admin/users/**, /users/**
+
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/users/*/requests/**, /admin/events/*/requests/**
+            - Path=/users/**/requests/**, /admin/events/**/requests/**  # ✅ ИСПРАВЛЕНО
+
         - id: stats-service
           uri: lb://stats-service
           predicates:
             - Path=/hit, /stats, /stat/**
+
         - id: discovery-server
           uri: lb://discovery-server
           predicates:
             - Path=/eureka/**
+
         - id: config-server
           uri: lb://config-server
           predicates:
