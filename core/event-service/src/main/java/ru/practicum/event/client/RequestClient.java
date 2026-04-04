@@ -15,7 +15,6 @@ public interface RequestClient {
     @GetMapping("/admin/events/{eventId}/requests/count")
     Long getConfirmedRequestsCount(@PathVariable("eventId") Long eventId);
 
-    // Batch-метод для получения количества подтверждённых заявок для нескольких событий
     @GetMapping("/admin/events/requests/counts")
     Map<Long, Long> getConfirmedRequestsCounts(@RequestParam("eventIds") List<Long> eventIds);
 
@@ -27,4 +26,9 @@ public interface RequestClient {
     EventRequestStatusUpdateResult changeRequestStatus(@PathVariable("userId") Long userId,
                                                        @PathVariable("eventId") Long eventId,
                                                        @RequestBody EventRequestStatusUpdateDto request);
+
+    // ✅ НОВЫЙ МЕТОД - создание запроса на участие
+    @PostMapping("/users/{userId}/requests")
+    ParticipationRequestDto createRequest(@PathVariable("userId") Long userId,
+                                          @RequestParam("eventId") Long eventId);
 }

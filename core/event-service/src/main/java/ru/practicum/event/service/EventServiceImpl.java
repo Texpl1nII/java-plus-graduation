@@ -63,6 +63,13 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional
+    public ParticipationRequestDto createRequest(Long userId, Long eventId) {
+        log.info("Creating request: userId={}, eventId={}", userId, eventId);
+        return requestClient.createRequest(userId, eventId);
+    }
+
+    @Override
     public List<EventShortDto> getEventsByIds(List<Long> ids) {
         List<Event> events = eventRepository.findAllById(ids);
         return makeEventShortDtoList(events);
