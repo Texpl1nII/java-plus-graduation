@@ -20,7 +20,11 @@ server:
   port: 0
 
 feign:
+  # Отключаем старый HTTP клиент
   httpclient:
+    enabled: false
+  # Включаем Apache HttpClient 5
+  hc5:
     enabled: true
   client:
     config:
