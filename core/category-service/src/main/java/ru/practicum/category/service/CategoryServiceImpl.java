@@ -16,6 +16,7 @@ import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
-    private final EventClient eventClient;  // ← ДОБАВИТЬ
+    private final EventClient eventClient;
 
     @Override
     public CategoryDto create(NewCategoryDto newCategoryDto) {
@@ -94,6 +95,23 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryDto getById(Long catId) {
         Category category = getCategoryById(catId);
         return categoryMapper.toDto(category);
+    }
+
+    // ✅ НОВАЯ РЕАЛИЗАЦИЯ - получение категорий по списку ID
+    @Override
+    public List<CategoryDto> getCategoriesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            log.info("Empty ids list, returning empty list");
+            return Collections.emptyList();
+        }
+
+        log.info("Getting categories by ids: {}", ids);
+        List<Category> categories = categoryRepository.findAllById(ids);
+        log.info("Found {} categories out of {} requested", categories.size(), ids.size());
+
+        return categories.stream()
+                .map(categoryMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     private Category getCategoryById(Long catId) {

@@ -15,5 +15,8 @@ public interface CategoryService {
     List<CategoryDto> getAll(int from, int size);
 
     CategoryDto getById(Long catId);
+
+    // ✅ НОВЫЙ МЕТОД - получение категорий по списку ID
+    List<CategoryDto> getCategoriesByIds(List<Long> ids);
 }
 

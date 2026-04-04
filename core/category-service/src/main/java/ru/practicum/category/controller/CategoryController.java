@@ -32,5 +32,12 @@ public class CategoryController {
         log.info("Found category: {}", category);
         return category;
     }
+
+    // ✅ НОВЫЙ МЕТОД - batch получение категорий по списку ID
+    @GetMapping("/batch")
+    public List<CategoryDto> getCategoriesByIds(@RequestParam List<Long> ids) {
+        log.info("Get categories by ids: {}", ids);
+        return categoryService.getCategoriesByIds(ids);
+    }
 }
 

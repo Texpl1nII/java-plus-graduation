@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException; // ← ДОБАВИТЬ ИМПОРТ
 
 @Slf4j
 @RestControllerAdvice
@@ -48,6 +49,15 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
         log.error("Malformed JSON request: {}", e.getMessage());
         return new ErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", "Required request body is missing or malformed");
+    }
+
+    // ✅ НОВЫЙ ОБРАБОТЧИК - для ошибок типов параметров
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.error("Type mismatch: {}", e.getMessage());
+        return new ErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request",
+                "Invalid parameter: " + e.getName() + " should be of type " + e.getRequiredType().getSimpleName());
     }
 
     @ExceptionHandler(Exception.class)
