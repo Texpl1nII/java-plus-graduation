@@ -28,13 +28,10 @@ spring:
           predicates:
             - Path=/admin/users/**, /users/**
 
-        # ✅ ИСПРАВЛЕННЫЙ РОУТ ДЛЯ REQUEST-SERVICE
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/users/*/requests/**, /admin/events/*/requests/**
-            # Используем * (одна звезда) для одного сегмента пути
-            # вместо **/ (две звезды с слешем)
+            - Path=/users/*/requests**, /admin/events/*/requests/**
 
         - id: stats-service
           uri: lb://stats-service
