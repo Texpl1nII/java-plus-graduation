@@ -648,7 +648,14 @@ public class EventServiceImpl implements EventService {
         }
 
         try {
-            return categoryClient.getCategoriesByIds(distinctIds);
+            // ✅ ИСПРАВЛЕНО: получаем List, преобразуем в Map
+            List<CategoryDto> categories = categoryClient.getCategoriesByIds(distinctIds);
+            return categories.stream()
+                    .collect(Collectors.toMap(
+                            CategoryDto::getId,
+                            category -> category,
+                            (existing, replacement) -> existing
+                    ));
         } catch (Exception e) {
             log.error("Failed to get categories batch: {}", distinctIds, e);
             return Collections.emptyMap();

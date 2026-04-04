@@ -1,13 +1,10 @@
 package ru.practicum.event.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import ru.practicum.event.dto.CategoryDto;
 
 import java.util.List;
-import java.util.Map;
 
 @FeignClient(name = "category-service")
 public interface CategoryClient {
@@ -19,6 +16,7 @@ public interface CategoryClient {
     List<CategoryDto> getAllCategories(@RequestParam("from") int from,
                                        @RequestParam("size") int size);
 
+    // ✅ ИСПРАВЛЕНО: List вместо Map
     @GetMapping("/categories/batch")
-    Map<Long, CategoryDto> getCategoriesByIds(@RequestParam("ids") List<Long> ids);
+    List<CategoryDto> getCategoriesByIds(@RequestParam("ids") List<Long> ids);
 }
