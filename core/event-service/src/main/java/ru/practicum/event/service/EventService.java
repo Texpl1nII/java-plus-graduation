@@ -34,4 +34,8 @@ public interface EventService {
     List<EventShortDto> getEventsByCategoryId(Long categoryId);
 
     ParticipationRequestDto createRequest(Long userId, Long eventId);
+
+    List<ParticipationRequestDto> getRequestsByUser(Long userId);
+
+    ParticipationRequestDto cancelRequest(Long userId, Long requestId);
 }

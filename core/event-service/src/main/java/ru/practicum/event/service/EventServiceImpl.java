@@ -63,6 +63,21 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public List<ParticipationRequestDto> getRequestsByUser(Long userId) {
+        log.info("Getting requests for user: {}", userId);
+        checkUser(userId);
+        return requestClient.getRequestsByUser(userId);
+    }
+
+    @Override
+    @Transactional
+    public ParticipationRequestDto cancelRequest(Long userId, Long requestId) {
+        log.info("Cancelling request: userId={}, requestId={}", userId, requestId);
+        checkUser(userId);
+        return requestClient.cancelRequest(userId, requestId);
+    }
+
+    @Override
     @Transactional
     public ParticipationRequestDto createRequest(Long userId, Long eventId) {
         log.info("Creating request: userId={}, eventId={}", userId, eventId);

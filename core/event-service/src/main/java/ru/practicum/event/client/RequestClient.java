@@ -31,4 +31,11 @@ public interface RequestClient {
     @PostMapping("/users/{userId}/requests")
     ParticipationRequestDto createRequest(@PathVariable("userId") Long userId,
                                           @RequestParam("eventId") Long eventId);
+
+    @GetMapping("/users/{userId}/requests")
+    List<ParticipationRequestDto> getRequestsByUser(@PathVariable("userId") Long userId);
+
+    @PatchMapping("/users/{userId}/requests/{requestId}/cancel")
+    ParticipationRequestDto cancelRequest(@PathVariable("userId") Long userId,
+                                          @PathVariable("requestId") Long requestId);
 }
