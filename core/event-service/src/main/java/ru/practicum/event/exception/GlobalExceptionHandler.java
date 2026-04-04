@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -48,6 +49,14 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
         log.error("Malformed JSON request: {}", e.getMessage());
         return new ErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", "Required request body is missing or malformed");
+    }
+
+    // ✅ НОВЫЙ ОБРАБОТЧИК - для отсутствующих ресурсов (чтобы возвращать 404 вместо 500)
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoResourceFound(NoResourceFoundException e) {
+        log.error("Resource not found: {}", e.getMessage());
+        return new ErrorResponse(HttpStatus.NOT_FOUND, "Not Found", "Resource not found: " + e.getResourcePath());
     }
 
     @ExceptionHandler(Exception.class)

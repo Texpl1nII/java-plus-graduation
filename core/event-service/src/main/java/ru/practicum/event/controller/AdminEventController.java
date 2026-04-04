@@ -45,6 +45,12 @@ public class AdminEventController {
         return eventService.getEventsAdmin(params);
     }
 
+    @GetMapping("/by-category/{categoryId}")
+    public List<EventShortDto> getEventsByCategory(@PathVariable Long categoryId) {
+        log.info("Get events by category id admin: {}", categoryId);
+        return eventService.getEventsByCategoryId(categoryId);
+    }
+
     @GetMapping("/{eventId}")
     public EventFullDto getEventById(@PathVariable Long eventId) {
         log.info("Get event by id admin: {}", eventId);
