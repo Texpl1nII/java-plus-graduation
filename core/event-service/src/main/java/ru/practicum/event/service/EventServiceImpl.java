@@ -74,14 +74,41 @@ public class EventServiceImpl implements EventService {
     public ParticipationRequestDto cancelRequest(Long userId, Long requestId) {
         log.info("Cancelling request: userId={}, requestId={}", userId, requestId);
         checkUser(userId);
-        return requestClient.cancelRequest(userId, requestId);
+
+        try {
+            return requestClient.cancelRequest(userId, requestId);
+        } catch (FeignException e) {
+            log.error("Feign error while cancelling request: status={}, message={}", e.status(), e.getMessage());
+            if (e.status() == 409) {
+                throw new ConflictException(e.getMessage());
+            }
+            if (e.status() == 404) {
+                throw new NotFoundException(e.getMessage());
+            }
+            throw e;
+        }
     }
 
     @Override
     @Transactional
     public ParticipationRequestDto createRequest(Long userId, Long eventId) {
         log.info("Creating request: userId={}, eventId={}", userId, eventId);
-        return requestClient.createRequest(userId, eventId);
+
+        // Проверяем, что событие существует
+        getEventByIdOrThrow(eventId);
+
+        try {
+            return requestClient.createRequest(userId, eventId);
+        } catch (FeignException e) {
+            log.error("Feign error while creating request: status={}, message={}", e.status(), e.getMessage());
+            if (e.status() == 409) {
+                throw new ConflictException(e.getMessage());
+            }
+            if (e.status() == 400) {
+                throw new ValidationException(e.getMessage());
+            }
+            throw e;
+        }
     }
 
     @Override
