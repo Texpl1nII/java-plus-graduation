@@ -2,23 +2,25 @@ spring:
   application:
     name: gateway-server
   config:
-    import: "configserver:"
+    import: "configserver:"  # ← убрать URL
   cloud:
     config:
       fail-fast: true
       discovery:
-        enabled: true
+        enabled: true          # ← включить discovery
         service-id: config-server
       retry:
         useRandomPolicy: true
         max-interval: 6000
 
 server:
-  port: 8081
+  port: 8080
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://discovery-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
   instance:
     instance-id: ${spring.application.name}:${random.value}
