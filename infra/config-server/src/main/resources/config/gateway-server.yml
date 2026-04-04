@@ -16,9 +16,9 @@ spring:
         - id: category-service
           uri: lb://category-service
           predicates:
-            - Path=/categories/**, /admin/categories/**  # ✅ ДОБАВЛЕН /admin/categories/**
+            - Path=/categories/**, /admin/categories/**
 
-        - id: compilation-service  # ✅ ДОБАВЛЕН НОВЫЙ РОУТ
+        - id: compilation-service
           uri: lb://compilation-service
           predicates:
             - Path=/compilations/**, /admin/compilations/**
@@ -28,10 +28,13 @@ spring:
           predicates:
             - Path=/admin/users/**, /users/**
 
+        # ✅ ИСПРАВЛЕННЫЙ РОУТ ДЛЯ REQUEST-SERVICE
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/users/**/requests/**, /admin/events/**/requests/**  # ✅ ИСПРАВЛЕНО
+            - Path=/users/*/requests/**, /admin/events/*/requests/**
+            # Используем * (одна звезда) для одного сегмента пути
+            # вместо **/ (две звезды с слешем)
 
         - id: stats-service
           uri: lb://stats-service
