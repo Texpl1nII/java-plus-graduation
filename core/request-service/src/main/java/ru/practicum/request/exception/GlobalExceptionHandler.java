@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleMissingParams(MissingServletRequestParameterException e) {
         log.warn("Missing request parameter: {}", e.getMessage());
         return new ErrorResponse(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST.value(),  // ← используем value()
                 "Bad Request",
                 e.getMessage()
         );
@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleBadRequest(BadRequestException e) {
         log.warn("Bad request: {}", e.getMessage());
         return new ErrorResponse(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST.value(),  // ← используем value()
                 "Bad Request",
                 e.getMessage()
         );
@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleDuplicated(DuplicatedException e) {
         log.warn("Duplicate: {}", e.getMessage());
         return new ErrorResponse(
-                HttpStatus.CONFLICT,
+                HttpStatus.CONFLICT.value(),  // ← используем value()
                 "Conflict",
                 e.getMessage()
         );
@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleConflict(ConflictException e) {
         log.warn("Conflict: {}", e.getMessage());
         return new ErrorResponse(
-                HttpStatus.CONFLICT,
+                HttpStatus.CONFLICT.value(),  // ← Использовать int вместо HttpStatus
                 "Conflict",
                 e.getMessage()
         );

@@ -4,15 +4,14 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 
 @Getter
-@NoArgsConstructor  // ← ДОБАВИТЬ
+@NoArgsConstructor
 public class ErrorResponse {
-    private HttpStatus status;
+    private int status;  // ← ИЗМЕНЕНО: int вместо HttpStatus
     private String reason;
     private String message;
 
@@ -23,6 +22,14 @@ public class ErrorResponse {
     private String error;
 
     public ErrorResponse(HttpStatus status, String reason, String message) {
+        this.status = status.value();  // ← ИЗМЕНЕНО: берем числовое значение
+        this.reason = reason;
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    // ✅ ДОБАВИТЬ КОНСТРУКТОР ДЛЯ ЧИСЛОВОГО СТАТУСА
+    public ErrorResponse(int status, String reason, String message) {
         this.status = status;
         this.reason = reason;
         this.message = message;
