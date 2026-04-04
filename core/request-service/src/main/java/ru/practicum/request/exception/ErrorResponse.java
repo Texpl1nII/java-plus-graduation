@@ -3,20 +3,21 @@ package ru.practicum.request.exception;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor  // ← ДОБАВИТЬ
 public class ErrorResponse {
     private HttpStatus status;
     private String reason;
     private String message;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private final LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp = LocalDateTime.now();
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String error;
@@ -25,5 +26,6 @@ public class ErrorResponse {
         this.status = status;
         this.reason = reason;
         this.message = message;
+        this.timestamp = LocalDateTime.now();
     }
 }

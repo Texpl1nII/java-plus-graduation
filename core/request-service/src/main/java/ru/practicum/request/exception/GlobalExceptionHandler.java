@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException; // ← ДОБАВИТЬ
 
 @Slf4j
 @RestControllerAdvice
@@ -75,6 +76,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 "Conflict",
                 e.getMessage()
+        );
+    }
+
+    // ✅ НОВЫЙ ОБРАБОТЧИК - для отсутствующих ресурсов (actuator/health, /)
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoResourceFound(NoResourceFoundException e) {
+        log.warn("Resource not found: {}", e.getMessage());
+        return new ErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "Not Found",
+                "Resource not found: " + e.getResourcePath()
         );
     }
 
