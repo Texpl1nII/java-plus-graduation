@@ -24,6 +24,7 @@ import ru.practicum.request.exception.NotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -64,28 +65,21 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     public ParticipationRequestDto create(Long userId, Long eventId) {
         log.info("Creating request: userId={}, eventId={}", userId, eventId);
 
-        // Проверяем существование пользователя
         checkUserExists(userId);
-
-        // Получаем событие
         EventFullDto event = checkEventExists(eventId);
 
-        // Проверяем, не создавал ли пользователь уже заявку
         if (repository.findByEventIdAndRequesterId(eventId, userId).isPresent()) {
             throw new DuplicatedException("Request already exists");
         }
 
-        // Проверяем, что пользователь не является инициатором
         if (event.getInitiatorId().equals(userId)) {
             throw new ConflictException("Event initiator cannot participate in their own event");
         }
 
-        // Проверяем, что событие опубликовано
         if (event.getState() != EventState.PUBLISHED) {
             throw new ConflictException("Cannot participate in unpublished event");
         }
 
-        // Проверяем лимит участников
         Long confirmedCountLong = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
         int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
 
@@ -93,13 +87,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConflictException("Participant limit has been reached");
         }
 
-        // Определяем статус
         RequestStatus status = RequestStatus.PENDING;
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
             status = RequestStatus.CONFIRMED;
         }
 
-        // Создаем заявку
         ParticipationRequest request = ParticipationRequest.builder()
                 .requesterId(userId)
                 .eventId(eventId)
@@ -135,7 +127,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConflictException("Cannot cancel another user's request");
         }
 
-        // Проверка: нельзя отменить уже подтвержденную заявку
         if (request.getStatus() == RequestStatus.CONFIRMED) {
             throw new ConflictException("Cannot cancel already confirmed request");
         }
@@ -169,7 +160,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
                                                               EventRequestStatusUpdateDto updateDto) {
         log.info("Changing request status: userId={}, eventId={}, updateDto={}", userId, eventId, updateDto);
 
-        // Валидация входных данных
         if (updateDto == null || updateDto.getRequestIds() == null || updateDto.getRequestIds().isEmpty()) {
             throw new BadRequestException("Request IDs cannot be empty");
         }
@@ -195,7 +185,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
         int availableSlots = event.getParticipantLimit() - confirmedCount;
 
-        // Проверка лимита до обработки
         if (updateDto.getStatus() == RequestStatus.CONFIRMED &&
                 updateDto.getRequestIds().size() > availableSlots && event.getParticipantLimit() > 0) {
             throw new ConflictException("Not enough available slots. Available: " + availableSlots +
@@ -245,5 +234,18 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     public Long countByEventId(Long eventId) {
         log.info("Counting requests for event: {}", eventId);
         return repository.countByEventId(eventId);
+    }
+
+    @Override
+    public Map<Long, Long> getConfirmedRequestsCounts(List<Long> eventIds) {
+        log.info("Getting confirmed requests counts for events: {}", eventIds);
+        if (eventIds == null || eventIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.countByEventIdInAndStatus(eventIds, RequestStatus.CONFIRMED).stream()
+                .collect(Collectors.toMap(
+                        r -> r.getEventId(),
+                        r -> r.getCount()
+                ));
     }
 }

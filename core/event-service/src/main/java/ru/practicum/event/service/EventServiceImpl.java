@@ -265,7 +265,6 @@ public class EventServiceImpl implements EventService {
                 dto.setViews(views.getOrDefault(event.getId(), 0L));
                 dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                // ========== ЗАПОЛНЯЕМ CATEGORY (как в makeEventShortDtoList) ==========
                 Long categoryId = event.getCategoryId();
                 CategoryDto category;
                 if (categoryId == null) {
@@ -283,7 +282,6 @@ public class EventServiceImpl implements EventService {
                 }
                 dto.setCategory(category);
 
-                // ========== ЗАПОЛНЯЕМ INITIATOR ==========
                 Long initiatorId = event.getInitiatorId();
                 UserShortDto initiator;
                 if (initiatorId == null) {
@@ -300,7 +298,6 @@ public class EventServiceImpl implements EventService {
                     }
                 }
                 dto.setInitiator(initiator);
-                // ============================================
 
                 result.add(dto);
             }
@@ -322,10 +319,8 @@ public class EventServiceImpl implements EventService {
         PageRequest pageRequest = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(), sortOrder);
         List<Event> events = eventRepository.findAll(builder, pageRequest).getContent();
 
-        // ========== ИСПОЛЬЗУЕМ makeEventShortDtoList ДЛЯ ОБЫЧНОЙ СОРТИРОВКИ ==========
         return makeEventShortDtoList(events);
     }
-    // ====================================================
 
     @Override
     public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
@@ -354,21 +349,9 @@ public class EventServiceImpl implements EventService {
 
         checkUser(userId);
 
-        // Временный fallback для categoryId
+        // Проверка обязательности categoryId (убрали fallback)
         if (newEventDto.getCategoryId() == null) {
-            log.warn("categoryId is null, trying to get default category");
-            try {
-                List<CategoryDto> categories = categoryClient.getAllCategories(0, 1);
-                if (categories != null && !categories.isEmpty()) {
-                    newEventDto.setCategoryId(categories.get(0).getId());
-                    log.info("Using default category with id: {}", categories.get(0).getId());
-                } else {
-                    throw new ValidationException("No categories available. Please create a category first.");
-                }
-            } catch (Exception e) {
-                log.error("Failed to get default category", e);
-                throw new ValidationException("Cannot get default category. Please provide categoryId or create categories.");
-            }
+            throw new ValidationException("Category ID is required");
         }
 
         checkCategory(newEventDto.getCategoryId());
@@ -484,6 +467,18 @@ public class EventServiceImpl implements EventService {
     }
 
     private List<EventFullDto> makeEventFullDtoList(List<Event> events) {
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Batch загрузка категорий
+        List<Long> allCategoryIds = events.stream()
+                .map(Event::getCategoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, CategoryDto> categoriesMap = getCategoriesBatch(allCategoryIds);
+
         Map<Long, Long> views = getViews(events);
         Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
 
@@ -494,8 +489,7 @@ public class EventServiceImpl implements EventService {
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // Исправлено: категория не должна быть null
-                    CategoryDto category = getCategoryById(event.getCategoryId());
+                    CategoryDto category = categoriesMap.get(event.getCategoryId());
                     if (category == null) {
                         category = new CategoryDto();
                         category.setId(event.getCategoryId());
@@ -503,7 +497,6 @@ public class EventServiceImpl implements EventService {
                     }
                     dto.setCategory(category);
 
-                    // Исправлено: инициатор не должен быть null
                     UserShortDto initiator = getUserById(event.getInitiatorId());
                     if (initiator == null) {
                         initiator = new UserShortDto();
@@ -522,6 +515,14 @@ public class EventServiceImpl implements EventService {
             return Collections.emptyList();
         }
 
+        // Batch загрузка категорий
+        List<Long> allCategoryIds = events.stream()
+                .map(Event::getCategoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, CategoryDto> categoriesMap = getCategoriesBatch(allCategoryIds);
+
         Map<Long, Long> views = getViews(events);
         Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
 
@@ -532,39 +533,19 @@ public class EventServiceImpl implements EventService {
                     dto.setViews(views.getOrDefault(event.getId(), 0L));
                     dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
 
-                    // ДОБАВИТЬ ПРОВЕРКУ НА null ДЛЯ event.getCategoryId()
-                    Long categoryId = event.getCategoryId();
-                    CategoryDto category;
-                    if (categoryId == null) {
-                        log.warn("Event {} has null categoryId", event.getId());
+                    CategoryDto category = categoriesMap.get(event.getCategoryId());
+                    if (category == null) {
                         category = new CategoryDto();
-                        category.setId(0L);
+                        category.setId(event.getCategoryId());
                         category.setName("Unknown Category");
-                    } else {
-                        category = getCategoryById(categoryId);
-                        if (category == null) {
-                            category = new CategoryDto();
-                            category.setId(categoryId);
-                            category.setName("Unknown Category");
-                        }
                     }
                     dto.setCategory(category);
 
-                    // Аналогично для инициатора
-                    Long initiatorId = event.getInitiatorId();
-                    UserShortDto initiator;
-                    if (initiatorId == null) {
-                        log.warn("Event {} has null initiatorId", event.getId());
+                    UserShortDto initiator = getUserById(event.getInitiatorId());
+                    if (initiator == null) {
                         initiator = new UserShortDto();
-                        initiator.setId(0L);
+                        initiator.setId(event.getInitiatorId());
                         initiator.setName("Unknown User");
-                    } else {
-                        initiator = getUserById(initiatorId);
-                        if (initiator == null) {
-                            initiator = new UserShortDto();
-                            initiator.setId(initiatorId);
-                            initiator.setName("Unknown User");
-                        }
                     }
                     dto.setInitiator(initiator);
 
@@ -600,20 +581,22 @@ public class EventServiceImpl implements EventService {
         return views;
     }
 
+    // Исправленный метод с batch-запросом
     private Map<Long, Long> getConfirmedRequests(List<Event> events) {
-        if (events.isEmpty()) return Collections.emptyMap();
-
-        Map<Long, Long> confirmedRequests = new HashMap<>();
-        for (Event event : events) {
-            try {
-                Long count = requestClient.getConfirmedRequestsCount(event.getId());
-                confirmedRequests.put(event.getId(), count != null ? count : 0L);
-            } catch (Exception e) {
-                log.error("Error getting confirmed requests count for event {}", event.getId(), e);
-                confirmedRequests.put(event.getId(), 0L);
-            }
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyMap();
         }
-        return confirmedRequests;
+
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+
+        try {
+            return requestClient.getConfirmedRequestsCounts(eventIds);
+        } catch (Exception e) {
+            log.error("Error getting confirmed requests counts for events {}", eventIds, e);
+            return Collections.emptyMap();
+        }
     }
 
     @Override
@@ -627,9 +610,30 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
     }
 
-    // ========== ИСПРАВЛЕННЫЙ МЕТОД getCategoryById ==========
+    // Batch метод для получения категорий
+    private Map<Long, CategoryDto> getCategoriesBatch(List<Long> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> distinctIds = categoryIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (distinctIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        try {
+            return categoryClient.getCategoriesByIds(distinctIds);
+        } catch (Exception e) {
+            log.error("Failed to get categories batch: {}", distinctIds, e);
+            return Collections.emptyMap();
+        }
+    }
+
     private CategoryDto getCategoryById(Long categoryId) {
-        // ДОБАВИТЬ: если categoryId == null, сразу вернуть заглушку
         if (categoryId == null) {
             log.warn("Category ID is null, returning default category");
             CategoryDto defaultCategory = new CategoryDto();
@@ -654,9 +658,7 @@ public class EventServiceImpl implements EventService {
             return defaultCategory;
         }
     }
-    // ========================================================
 
-    // ========== ИСПРАВЛЕННЫЙ МЕТОД getUserById ==========
     private UserShortDto getUserById(Long userId) {
         if (userId == null) return null;
         try {
@@ -676,7 +678,6 @@ public class EventServiceImpl implements EventService {
             return defaultUser;
         }
     }
-    // ====================================================
 
     @Override
     public List<EventShortDto> getEventsByCategoryId(Long categoryId) {

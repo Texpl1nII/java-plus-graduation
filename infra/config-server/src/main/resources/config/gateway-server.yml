@@ -1,37 +1,41 @@
 spring:
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
       routes:
-        - id: user-service
-          uri: lb://user-service
-          predicates:
-            - Path=/admin/users/**
-        - id: category-service
-          uri: lb://category-service
-          predicates:
-            - Path=/categories/**,/admin/categories/**
         - id: event-service
           uri: lb://event-service
           predicates:
-            - Path=/events/**,/admin/events/**,/users/*/events/**
+            - Path=/events/**, /admin/events/**, /users/**
+
+        - id: category-service
+          uri: lb://category-service
+          predicates:
+            - Path=/categories/**
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**, /users/**
+
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/users/*/requests/**,/users/*/events/*/requests/**
-        - id: compilation-service
-          uri: lb://compilation-service
+            - Path=/users/*/requests/**, /admin/events/*/requests/**
+
+        - id: stats-service
+          uri: lb://stats-service
           predicates:
-            - Path=/compilations/**,/admin/compilations/**
-        - id: stats-server
-          uri: lb://stats-server
+            - Path=/hit, /stats, /stat/**
+
+        - id: discovery-server
+          uri: lb://discovery-server
           predicates:
-            - Path=/stat/**
-          filters:
-            - RewritePath=/stat/(?<remaining>.*), /${remaining}
+            - Path=/eureka/**
+
+        - id: config-server
+          uri: lb://config-server
+          predicates:
+            - Path=/config/**
 
 server:
   port: 8080

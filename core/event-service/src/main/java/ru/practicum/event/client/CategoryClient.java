@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import ru.practicum.event.dto.CategoryDto;
 
 import java.util.List;
+import java.util.Map;
 
 @FeignClient(name = "category-service")
 public interface CategoryClient {
@@ -17,4 +18,7 @@ public interface CategoryClient {
     @GetMapping("/categories")
     List<CategoryDto> getAllCategories(@RequestParam("from") int from,
                                        @RequestParam("size") int size);
+
+    @GetMapping("/categories/batch")
+    Map<Long, CategoryDto> getCategoriesByIds(@RequestParam("ids") List<Long> ids);
 }

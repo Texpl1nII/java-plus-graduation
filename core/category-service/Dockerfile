@@ -1,3 +1,3 @@
 FROM openjdk:21-jdk-slim
-COPY target/event-service-*.jar app.jar
+COPY target/category-service-*.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app.jar"]
