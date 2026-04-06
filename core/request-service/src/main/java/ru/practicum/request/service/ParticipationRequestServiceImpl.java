@@ -1,7 +1,6 @@
 package ru.practicum.request.service;
 
-import feign.FeignException;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,14 +10,15 @@ import ru.practicum.request.dto.EventFullDto;
 import ru.practicum.request.dto.EventRequestStatusUpdateDto;
 import ru.practicum.request.dto.EventRequestStatusUpdateResult;
 import ru.practicum.request.dto.ParticipationRequestDto;
-import ru.practicum.request.enums.EventState;
 import ru.practicum.request.enums.RequestStatus;
+import ru.practicum.request.exception.BadRequestException;
+import ru.practicum.request.exception.ConflictException;
+import ru.practicum.request.limit.ParticipantLimitChecker;
 import ru.practicum.request.mapper.ParticipationRequestMapper;
 import ru.practicum.request.model.ParticipationRequest;
 import ru.practicum.request.repository.ParticipationRequestRepository;
-import ru.practicum.request.exception.BadRequestException;
-import ru.practicum.request.exception.ConflictException;
-import ru.practicum.request.exception.DuplicatedException;
+import ru.practicum.request.status.RequestStatusManager;
+import ru.practicum.request.validator.RequestValidator;
 import ru.practicum.request.exception.NotFoundException;
 
 import java.time.LocalDateTime;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ParticipationRequestServiceImpl implements ParticipationRequestService {
 
@@ -37,26 +37,23 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final UserClient userClient;
     private final EventClient eventClient;
     private final ParticipationRequestMapper mapper;
+    private final RequestValidator validator;
+    private final RequestStatusManager statusManager;
+    private final ParticipantLimitChecker limitChecker;
 
     private void checkUserExists(Long userId) {
         try {
             userClient.getUserById(userId);
-        } catch (FeignException e) {
-            if (e.status() == 404) {
-                throw new NotFoundException("User with id=" + userId + " not found");
-            }
-            throw e;
+        } catch (Exception e) {
+            throw new NotFoundException("User with id=" + userId + " not found");
         }
     }
 
     private EventFullDto checkEventExists(Long eventId) {
         try {
             return eventClient.getEventById(eventId);
-        } catch (FeignException e) {
-            if (e.status() == 404) {
-                throw new NotFoundException("Event with id=" + eventId + " not found");
-            }
-            throw e;
+        } catch (Exception e) {
+            throw new NotFoundException("Event with id=" + eventId + " not found");
         }
     }
 
@@ -68,34 +65,19 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         checkUserExists(userId);
         EventFullDto event = checkEventExists(eventId);
 
-        if (repository.findByEventIdAndRequesterId(eventId, userId).isPresent()) {
-            throw new DuplicatedException("Request already exists");
-        }
+        // Валидация
+        validator.validateNotDuplicate(eventId, userId);
+        validator.validateNotInitiator(userId, event.getInitiatorId());
+        validator.validateEventPublished(event);
 
-        if (event.getInitiatorId().equals(userId)) {
-            throw new ConflictException("Event initiator cannot participate in their own event");
-        }
+        int confirmedCount = limitChecker.getConfirmedCount(eventId);
+        validator.validateParticipantLimit(event, confirmedCount);
 
-        if (event.getState() != EventState.PUBLISHED) {
-            throw new ConflictException("Cannot participate in unpublished event");
-        }
-
-        Long confirmedCountLong = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-        int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
-
-        if (event.getParticipantLimit() > 0 && confirmedCount >= event.getParticipantLimit()) {
-            throw new ConflictException("Participant limit has been reached");
-        }
-
-        RequestStatus status = RequestStatus.PENDING;
-        if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
-            status = RequestStatus.CONFIRMED;
-        }
-
+        // Создание запроса
         ParticipationRequest request = ParticipationRequest.builder()
                 .requesterId(userId)
                 .eventId(eventId)
-                .status(status)
+                .status(statusManager.determineInitialStatus(event))
                 .created(LocalDateTime.now())
                 .build();
 
@@ -123,15 +105,9 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         ParticipationRequest request = repository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Request not found"));
 
-        if (!request.getRequesterId().equals(userId)) {
-            throw new ConflictException("Cannot cancel another user's request");
-        }
+        validator.validateRequestStatusForCancel(request, userId);
+        statusManager.cancelRequest(request);
 
-        if (request.getStatus() == RequestStatus.CONFIRMED) {
-            throw new ConflictException("Cannot cancel already confirmed request");
-        }
-
-        request.setStatus(RequestStatus.CANCELED);
         ParticipationRequest saved = repository.save(request);
         log.info("Request cancelled: {}", saved);
 
@@ -171,50 +147,34 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConflictException("Only event initiator can change request status");
         }
 
-        if (event.getState() != EventState.PUBLISHED) {
-            throw new ConflictException("Cannot change request status for unpublished event");
-        }
+        validator.validateEventPublished(event);
 
         List<ParticipationRequest> requests = repository.findAllById(updateDto.getRequestIds());
-
         if (requests.size() != updateDto.getRequestIds().size()) {
             throw new NotFoundException("Some requests not found");
         }
 
-        Long confirmedCountLong = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-        int confirmedCount = confirmedCountLong != null ? confirmedCountLong.intValue() : 0;
-        int availableSlots = event.getParticipantLimit() - confirmedCount;
-
-        if (updateDto.getStatus() == RequestStatus.CONFIRMED &&
-                updateDto.getRequestIds().size() > availableSlots && event.getParticipantLimit() > 0) {
-            throw new ConflictException("Not enough available slots. Available: " + availableSlots +
-                    ", Requested: " + updateDto.getRequestIds().size());
-        }
+        limitChecker.checkAvailableSlots(event, updateDto.getRequestIds().size());
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
         List<ParticipationRequest> rejected = new ArrayList<>();
+        int availableSlots = limitChecker.calculateRemainingSlots(event);
 
         for (ParticipationRequest request : requests) {
-            if (request.getStatus() != RequestStatus.PENDING) {
-                log.warn("Request {} is not PENDING, status={}", request.getId(), request.getStatus());
-                throw new ConflictException("Request status must be PENDING");
-            }
+            validator.validateRequestStatusForChange(request);
 
             if (updateDto.getStatus() == RequestStatus.CONFIRMED) {
                 if (availableSlots > 0) {
-                    request.setStatus(RequestStatus.CONFIRMED);
+                    statusManager.confirmRequest(request);
                     confirmed.add(request);
                     availableSlots--;
-                    log.debug("Request {} confirmed, remaining slots: {}", request.getId(), availableSlots);
                 } else {
-                    request.setStatus(RequestStatus.REJECTED);
+                    statusManager.rejectRequest(request);
                     rejected.add(request);
-                    log.debug("Request {} rejected (no slots)", request.getId());
                 }
             } else if (updateDto.getStatus() == RequestStatus.REJECTED) {
-                request.setStatus(RequestStatus.REJECTED);
+                statusManager.rejectRequest(request);
                 rejected.add(request);
-                log.debug("Request {} rejected", request.getId());
             }
         }
 
