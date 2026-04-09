@@ -6,15 +6,13 @@ import ru.practicum.collector.model.ActionType;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 import ru.practicum.stats.proto.UserActionMessage;
 
-import java.time.Instant;
-
 @UtilityClass
 public class UserActionMapper {
 
     public static UserActionAvro toAvro(UserActionMessage protoMessage) {
         ActionType actionType = ActionType.fromProto(protoMessage.getActionType());
 
-        // Правильная конвертация Protobuf Timestamp → milliseconds
+        // Конвертируем Protobuf Timestamp в milliseconds (long)
         long timestampMillis = protoMessage.getTimestamp().getSeconds() * 1000 +
                 protoMessage.getTimestamp().getNanos() / 1_000_000;
 
@@ -22,7 +20,7 @@ public class UserActionMapper {
                 .setUserId(protoMessage.getUserId())
                 .setEventId(protoMessage.getEventId())
                 .setActionType(ru.practicum.ewm.stats.avro.ActionTypeAvro.valueOf(actionType.name()))
-                .setTimestamp(timestampMillis)  // ← long, а не Instant
+                .setTimestamp(timestampMillis)  // ← long, НЕ Instant!
                 .build();
     }
 }
