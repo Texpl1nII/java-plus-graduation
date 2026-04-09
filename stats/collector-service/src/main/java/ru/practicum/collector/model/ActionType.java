@@ -1,0 +1,16 @@
+package ru.practicum.collector.model;
+
+public enum ActionType {
+    VIEW,
+    REGISTER,
+    LIKE;
+
+    public static ActionType fromProto(ru.practicum.stats.proto.ActionTypeProto protoType) {
+        return switch (protoType) {
+            case ACTION_VIEW -> VIEW;
+            case ACTION_REGISTER -> REGISTER;
+            case ACTION_LIKE -> LIKE;
+            default -> throw new IllegalArgumentException("Unknown action type: " + protoType);
+        };
+    }
+}

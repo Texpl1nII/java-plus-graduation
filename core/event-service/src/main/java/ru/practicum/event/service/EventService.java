@@ -38,4 +38,6 @@ public interface EventService {
     List<ParticipationRequestDto> getRequestsByUser(Long userId);
 
     ParticipationRequestDto cancelRequest(Long userId, Long requestId);
+
+    boolean isUserRegisteredOnEvent(Long userId, Long eventId);
 }

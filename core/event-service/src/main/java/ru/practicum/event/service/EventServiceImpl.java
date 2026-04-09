@@ -17,6 +17,7 @@ import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
+import ru.practicum.event.enums.RequestStatus;
 import ru.practicum.event.exception.ConflictException;
 import ru.practicum.event.exception.NotFoundException;
 import ru.practicum.event.exception.ValidationException;
@@ -25,6 +26,8 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
+import ru.practicum.event.client.CollectorGrpcClient;  // НОВЫЙ импорт
+import ru.practicum.stats.proto.ActionTypeProto;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,10 +47,25 @@ public class EventServiceImpl implements EventService {
     private final UserClient userClient;
     private final RequestClient requestClient;
     private final EventDtoAssembler eventDtoAssembler;
+    private final CollectorGrpcClient collectorGrpcClient;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
+
+    @Override
+    public boolean isUserRegisteredOnEvent(Long userId, Long eventId) {
+        try {
+            // Проверяем через request-client, есть ли подтверждённая заявка
+            List<ParticipationRequestDto> requests = requestClient.getEventRequests(userId, eventId);
+            return requests.stream()
+                    .anyMatch(r -> r.getRequesterId().equals(userId) &&
+                            r.getStatus() == RequestStatus.CONFIRMED);
+        } catch (Exception e) {
+            log.error("Error checking user registration: userId={}, eventId={}", userId, eventId, e);
+            return false;
+        }
+    }
 
     private void checkUser(Long userId) {
         if (userId == null) {
@@ -136,57 +154,57 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> getEventsPublic(EventPublicFilterParams params) {
-        sendStat(params.getRequest());
+    public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
+        log.info("Getting public event with id: {}", id);
 
-        // Парсинг дат
-        LocalDateTime start = parseStartDate(params.getRangeStart());
-        LocalDateTime end = parseEndDate(params.getRangeEnd());
-        validateDates(start, end, params.getRangeStart(), params.getRangeEnd());
+        Event event = getEventByIdOrThrow(id);
 
-        BooleanBuilder builder = new BooleanBuilder();
-        QEvent qEvent = QEvent.event;
-
-        builder.and(qEvent.state.eq(EventState.PUBLISHED));
-
-        // Текстовый поиск
-        if (params.getText() != null && !params.getText().isBlank()) {
-            builder.and(qEvent.annotation.containsIgnoreCase(params.getText())
-                    .or(qEvent.description.containsIgnoreCase(params.getText())));
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Event must be published");
         }
 
-        // Фильтр по категориям
-        if (params.getCategories() != null && !params.getCategories().isEmpty()) {
-            List<Long> validCategories = validateCategories(params.getCategories());
-            if (validCategories.isEmpty()) {
-                return Collections.emptyList();
+        // НОВОЕ: отправляем VIEW в Collector через gRPC
+        String userIdHeader = request.getHeader("X-EWM-USER-ID");
+        if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                long userId = Long.parseLong(userIdHeader);
+                collectorGrpcClient.sendUserAction(userId, id, ActionTypeProto.ACTION_VIEW);
+                log.info("Sent VIEW action to Collector: userId={}, eventId={}", userId, id);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid user ID header format: {}", userIdHeader);
+            } catch (Exception e) {
+                log.error("Failed to send VIEW action to Collector: userId={}, eventId={}", userIdHeader, id, e);
             }
-            builder.and(qEvent.categoryId.in(validCategories));
+        } else {
+            log.debug("No user ID header found, skipping VIEW action sending");
         }
 
-        if (params.getPaid() != null) {
-            builder.and(qEvent.paid.eq(params.getPaid()));
+        // СТАРОЕ: отправляем статистику в stats-server (для обратной совместимости)
+        sendStat(request);
+
+        // Получаем дополнительные данные для DTO
+        EventFullDto eventFullDto = eventDtoAssembler.toFullDto(event);
+
+        // Получаем количество подтверждённых заявок
+        try {
+            Long confirmedRequests = requestClient.getConfirmedRequestsCount(event.getId());
+            eventFullDto.setConfirmedRequests(confirmedRequests);
+        } catch (Exception e) {
+            log.warn("Failed to get confirmed requests count for eventId={}", event.getId(), e);
+            eventFullDto.setConfirmedRequests(0L);
         }
 
-        builder.and(qEvent.eventDate.goe(start));
-        if (end != null) {
-            builder.and(qEvent.eventDate.loe(end));
+        // Получаем количество просмотров (из старой статистики)
+        try {
+            Map<Long, Long> views = getViewsFromStats(List.of(event));
+            Long viewsCount = views.getOrDefault(event.getId(), 0L);
+            eventFullDto.setViews(viewsCount);
+        } catch (Exception e) {
+            log.warn("Failed to get views for eventId={}", event.getId(), e);
+            eventFullDto.setViews(0L);
         }
 
-        if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
-            builder.and(qEvent.participantLimit.eq(0));
-        }
-
-        // Сортировка по VIEWS
-        if ("VIEWS".equals(params.getSort())) {
-            return getEventsSortedByViews(builder, params);
-        }
-
-        PageRequest pageRequest = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(),
-                Sort.by(Sort.Direction.ASC, "eventDate"));
-        List<Event> events = eventRepository.findAll(builder, pageRequest).getContent();
-
-        return eventDtoAssembler.toShortDtoList(events);
+        return eventFullDto;
     }
 
     private List<EventShortDto> getEventsSortedByViews(BooleanBuilder builder, EventPublicFilterParams params) {

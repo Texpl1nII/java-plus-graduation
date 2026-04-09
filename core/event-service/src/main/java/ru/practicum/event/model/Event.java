@@ -58,4 +58,8 @@ public class Event {
     @JoinColumn(name = "location_id", nullable = false)
     @ToString.Exclude
     private Location location;
+
+    // НОВОЕ ПОЛЕ! рейтинг мероприятия (вместо views)
+    @Column(nullable = false)
+    private Double rating = 0.0;
 }

@@ -1,0 +1,43 @@
+server:
+  port: 0  # случайный порт
+
+spring:
+  application:
+    name: collector-service
+
+  config:
+    import: "configserver:http://config-server:8888"
+
+  cloud:
+    config:
+      discovery:
+        enabled: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      schema:
+        registry:
+          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
+grpc:
+  server:
+    port: 0  # случайный порт
+
+kafka:
+  topics:
+    user-actions: stats.user-actions.v1
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.kafka: INFO

@@ -1,0 +1,38 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: aggregator-service
+
+  config:
+    import: "configserver:http://config-server:8888"
+
+  cloud:
+    config:
+      discovery:
+        enabled: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      schema:
+        registry:
+          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+kafka:
+  topics:
+    user-actions: stats.user-actions.v1
+    events-similarity: stats.events-similarity.v1
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.kafka: INFO
