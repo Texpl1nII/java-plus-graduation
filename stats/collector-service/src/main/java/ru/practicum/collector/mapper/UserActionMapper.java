@@ -6,6 +6,8 @@ import ru.practicum.collector.model.ActionType;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 import ru.practicum.stats.proto.UserActionMessage;
 
+import java.time.Instant;
+
 @UtilityClass
 public class UserActionMapper {
 
@@ -16,11 +18,13 @@ public class UserActionMapper {
         long timestampMillis = protoTimestamp.getSeconds() * 1000L +
                 protoTimestamp.getNanos() / 1_000_000L;
 
+        Instant instant = Instant.ofEpochMilli(timestampMillis);
+
         return UserActionAvro.newBuilder()
                 .setUserId(protoMessage.getUserId())
                 .setEventId(protoMessage.getEventId())
                 .setActionType(ru.practicum.ewm.stats.avro.ActionTypeAvro.valueOf(actionType.name()))
-                .setTimestamp(timestampMillis)
+                .setTimestamp(instant)
                 .build();
     }
 }

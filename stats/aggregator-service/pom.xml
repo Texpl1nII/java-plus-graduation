@@ -106,7 +106,6 @@
                         <configuration>
                             <sourceDirectory>${project.basedir}/src/main/resources/avro</sourceDirectory>
                             <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
-                            <enableLogicalTypeConversion>true</enableLogicalTypeConversion>
                         </configuration>
                     </execution>
                 </executions>
