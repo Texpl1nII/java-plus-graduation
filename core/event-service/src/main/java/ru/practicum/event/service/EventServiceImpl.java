@@ -9,11 +9,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatClient;
-import feign.FeignException;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.assembler.EventDtoAssembler;
 import ru.practicum.event.client.CategoryClient;
+import ru.practicum.event.client.CollectorGrpcClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
@@ -26,7 +26,6 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
-import ru.practicum.event.client.CollectorGrpcClient;  // НОВЫЙ импорт
 import ru.practicum.stats.proto.ActionTypeProto;
 
 import java.time.LocalDateTime;
@@ -52,20 +51,6 @@ public class EventServiceImpl implements EventService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
-
-    @Override
-    public boolean isUserRegisteredOnEvent(Long userId, Long eventId) {
-        try {
-            // Проверяем через request-client, есть ли подтверждённая заявка
-            List<ParticipationRequestDto> requests = requestClient.getEventRequests(userId, eventId);
-            return requests.stream()
-                    .anyMatch(r -> r.getRequesterId().equals(userId) &&
-                            r.getStatus() == RequestStatus.CONFIRMED);
-        } catch (Exception e) {
-            log.error("Error checking user registration: userId={}, eventId={}", userId, eventId, e);
-            return false;
-        }
-    }
 
     private void checkUser(Long userId) {
         if (userId == null) {
@@ -154,57 +139,53 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
-        log.info("Getting public event with id: {}", id);
+    public List<EventShortDto> getEventsPublic(EventPublicFilterParams params) {
+        sendStat(params.getRequest());
 
-        Event event = getEventByIdOrThrow(id);
+        LocalDateTime start = parseStartDate(params.getRangeStart());
+        LocalDateTime end = parseEndDate(params.getRangeEnd());
+        validateDates(start, end, params.getRangeStart(), params.getRangeEnd());
 
-        if (event.getState() != EventState.PUBLISHED) {
-            throw new NotFoundException("Event must be published");
+        BooleanBuilder builder = new BooleanBuilder();
+        QEvent qEvent = QEvent.event;
+
+        builder.and(qEvent.state.eq(EventState.PUBLISHED));
+
+        if (params.getText() != null && !params.getText().isBlank()) {
+            builder.and(qEvent.annotation.containsIgnoreCase(params.getText())
+                    .or(qEvent.description.containsIgnoreCase(params.getText())));
         }
 
-        // НОВОЕ: отправляем VIEW в Collector через gRPC
-        String userIdHeader = request.getHeader("X-EWM-USER-ID");
-        if (userIdHeader != null && !userIdHeader.isBlank()) {
-            try {
-                long userId = Long.parseLong(userIdHeader);
-                collectorGrpcClient.sendUserAction(userId, id, ActionTypeProto.ACTION_VIEW);
-                log.info("Sent VIEW action to Collector: userId={}, eventId={}", userId, id);
-            } catch (NumberFormatException e) {
-                log.warn("Invalid user ID header format: {}", userIdHeader);
-            } catch (Exception e) {
-                log.error("Failed to send VIEW action to Collector: userId={}, eventId={}", userIdHeader, id, e);
+        if (params.getCategories() != null && !params.getCategories().isEmpty()) {
+            List<Long> validCategories = validateCategories(params.getCategories());
+            if (validCategories.isEmpty()) {
+                return Collections.emptyList();
             }
-        } else {
-            log.debug("No user ID header found, skipping VIEW action sending");
+            builder.and(qEvent.categoryId.in(validCategories));
         }
 
-        // СТАРОЕ: отправляем статистику в stats-server (для обратной совместимости)
-        sendStat(request);
-
-        // Получаем дополнительные данные для DTO
-        EventFullDto eventFullDto = eventDtoAssembler.toFullDto(event);
-
-        // Получаем количество подтверждённых заявок
-        try {
-            Long confirmedRequests = requestClient.getConfirmedRequestsCount(event.getId());
-            eventFullDto.setConfirmedRequests(confirmedRequests);
-        } catch (Exception e) {
-            log.warn("Failed to get confirmed requests count for eventId={}", event.getId(), e);
-            eventFullDto.setConfirmedRequests(0L);
+        if (params.getPaid() != null) {
+            builder.and(qEvent.paid.eq(params.getPaid()));
         }
 
-        // Получаем количество просмотров (из старой статистики)
-        try {
-            Map<Long, Long> views = getViewsFromStats(List.of(event));
-            Long viewsCount = views.getOrDefault(event.getId(), 0L);
-            eventFullDto.setViews(viewsCount);
-        } catch (Exception e) {
-            log.warn("Failed to get views for eventId={}", event.getId(), e);
-            eventFullDto.setViews(0L);
+        builder.and(qEvent.eventDate.goe(start));
+        if (end != null) {
+            builder.and(qEvent.eventDate.loe(end));
         }
 
-        return eventFullDto;
+        if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
+            builder.and(qEvent.participantLimit.eq(0));
+        }
+
+        if ("VIEWS".equals(params.getSort())) {
+            return getEventsSortedByViews(builder, params);
+        }
+
+        PageRequest pageRequest = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(),
+                Sort.by(Sort.Direction.ASC, "eventDate"));
+        List<Event> events = eventRepository.findAll(builder, pageRequest).getContent();
+
+        return eventDtoAssembler.toShortDtoList(events);
     }
 
     private List<EventShortDto> getEventsSortedByViews(BooleanBuilder builder, EventPublicFilterParams params) {
@@ -235,12 +216,37 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
+        log.info("Getting public event with id: {}", id);
+
         Event event = getEventByIdOrThrow(id);
+
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Event must be published");
         }
+
+        // Отправляем VIEW в Collector через gRPC
+        String userIdHeader = request.getHeader("X-EWM-USER-ID");
+        if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                long userId = Long.parseLong(userIdHeader);
+                collectorGrpcClient.sendUserAction(userId, id, ActionTypeProto.ACTION_VIEW);
+                log.info("Sent VIEW action to Collector: userId={}, eventId={}", userId, id);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid user ID header format: {}", userIdHeader);
+            } catch (Exception e) {
+                log.error("Failed to send VIEW action to Collector: userId={}, eventId={}", userIdHeader, id, e);
+            }
+        } else {
+            log.debug("No user ID header found, skipping VIEW action sending");
+        }
+
+        // Старая статистика (для обратной совместимости)
         sendStat(request);
-        return eventDtoAssembler.toFullDto(event);
+
+        // Получаем DTO через Assembler
+        EventFullDto eventFullDto = eventDtoAssembler.toFullDto(event);
+
+        return eventFullDto;
     }
 
     @Override
@@ -269,6 +275,22 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getEventsByCategoryId(Long categoryId) {
         List<Event> events = eventRepository.findAllByCategoryId(categoryId);
         return eventDtoAssembler.toShortDtoList(events);
+    }
+
+    @Override
+    public boolean isUserRegisteredOnEvent(Long userId, Long eventId) {
+        log.debug("Checking if user {} is registered on event {}", userId, eventId);
+        try {
+            List<ParticipationRequestDto> requests = requestClient.getEventRequests(userId, eventId);
+            boolean isRegistered = requests.stream()
+                    .anyMatch(r -> r.getRequesterId().equals(userId) &&
+                            r.getStatus() == RequestStatus.CONFIRMED);
+            log.debug("User {} is registered on event {}: {}", userId, eventId, isRegistered);
+            return isRegistered;
+        } catch (Exception e) {
+            log.error("Error checking user registration: userId={}, eventId={}", userId, eventId, e);
+            return false;
+        }
     }
 
     // ========== CREATE METHODS ==========
@@ -391,12 +413,9 @@ public class EventServiceImpl implements EventService {
         checkUser(userId);
         try {
             return requestClient.changeRequestStatus(userId, eventId, request);
-        } catch (FeignException e) {
-            log.error("Feign error while changing request status: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) {
-                throw new ConflictException(e.getMessage());
-            }
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while changing request status", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
@@ -407,11 +426,9 @@ public class EventServiceImpl implements EventService {
         getEventByIdOrThrow(eventId);
         try {
             return requestClient.createRequest(userId, eventId);
-        } catch (FeignException e) {
-            log.error("Feign error while creating request: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) throw new ConflictException(e.getMessage());
-            if (e.status() == 400) throw new ValidationException(e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while creating request", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
@@ -429,15 +446,13 @@ public class EventServiceImpl implements EventService {
         checkUser(userId);
         try {
             return requestClient.cancelRequest(userId, requestId);
-        } catch (FeignException e) {
-            log.error("Feign error while cancelling request: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) throw new ConflictException(e.getMessage());
-            if (e.status() == 404) throw new NotFoundException(e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while cancelling request", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
-    // ========== ПРИВАТНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ PUBLIC ENDPOINT ==========
+    // ========== ПРИВАТНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
 
     private LocalDateTime parseStartDate(String rangeStart) {
         if (rangeStart == null || rangeStart.isBlank()) {
@@ -531,7 +546,10 @@ public class EventServiceImpl implements EventService {
         if (userId == null) return null;
         try {
             UserDto user = userClient.getUserById(userId);
-            return new UserShortDto(user.getId(), user.getName());
+            UserShortDto shortDto = new UserShortDto();
+            shortDto.setId(user.getId());
+            shortDto.setName(user.getName());
+            return shortDto;
         } catch (Exception e) {
             UserShortDto defaultUser = new UserShortDto();
             defaultUser.setId(userId);

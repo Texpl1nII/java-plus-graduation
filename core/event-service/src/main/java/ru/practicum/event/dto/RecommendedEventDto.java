@@ -5,8 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@AllArgsConstructor  // ← добавить эту аннотацию
 @NoArgsConstructor
-@AllArgsConstructor
 public class RecommendedEventDto {
     private Long eventId;
     private Double score;
