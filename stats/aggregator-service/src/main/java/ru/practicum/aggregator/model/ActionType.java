@@ -1,5 +1,7 @@
 package ru.practicum.aggregator.model;
 
+import ru.practicum.ewm.stats.avro.ActionTypeAvro;
+
 public enum ActionType {
     VIEW(0.4),
     REGISTER(0.8),
@@ -15,12 +17,11 @@ public enum ActionType {
         return weight;
     }
 
-    public static ActionType fromAvro(ru.practicum.ewm.stats.avro.ActionTypeAvro avroType) {
+    public static ActionType fromAvro(ActionTypeAvro avroType) {
         return switch (avroType) {
             case VIEW -> VIEW;
             case REGISTER -> REGISTER;
             case LIKE -> LIKE;
-            default -> throw new IllegalArgumentException("Unknown action type: " + avroType);
         };
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import ru.practicum.aggregator.model.EventSimilarity;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 
+import java.time.Instant;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -24,7 +26,7 @@ public class SimilarityProducer {
                 .setEventA(similarity.getEventA())
                 .setEventB(similarity.getEventB())
                 .setScore(similarity.getScore())
-                .setTimestamp(similarity.getTimestamp())
+                .setTimestamp(Instant.ofEpochMilli(similarity.getTimestamp()))  // ← long → Instant
                 .build();
 
         log.info("Sending similarity to topic {}: eventA={}, eventB={}, score={}",
