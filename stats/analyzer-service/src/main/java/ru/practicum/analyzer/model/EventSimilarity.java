@@ -5,8 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 @Entity
 @Table(name = "event_similarity",
         uniqueConstraints = @UniqueConstraint(columnNames = {"event_a", "event_b"}))
@@ -29,5 +27,5 @@ public class EventSimilarity {
     private Double score;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    private Long updatedAt;  // ← long (timestamp millis)
 }

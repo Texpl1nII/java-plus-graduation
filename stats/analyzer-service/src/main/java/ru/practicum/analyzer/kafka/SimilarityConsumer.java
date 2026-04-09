@@ -9,7 +9,6 @@ import ru.practicum.analyzer.model.EventSimilarity;
 import ru.practicum.analyzer.repository.EventSimilarityRepository;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Slf4j
@@ -29,15 +28,14 @@ public class SimilarityConsumer {
             long eventA = similarity.getEventA();
             long eventB = similarity.getEventB();
             double score = similarity.getScore();
-            Instant updatedAt = Instant.ofEpochMilli(similarity.getTimestamp());
+            long updatedAt = similarity.getTimestamp();  // ← long, а не Instant
 
-            // Проверяем, есть ли уже запись о сходстве
             Optional<EventSimilarity> existing = eventSimilarityRepository.findByEventAAndEventB(eventA, eventB);
 
             if (existing.isPresent()) {
                 EventSimilarity eventSimilarity = existing.get();
                 eventSimilarity.setScore(score);
-                eventSimilarity.setUpdatedAt(updatedAt);
+                eventSimilarity.setUpdatedAt(updatedAt);  // ← передаём long
                 eventSimilarityRepository.save(eventSimilarity);
                 log.info("Updated similarity for pair ({}, {}): new score={}", eventA, eventB, score);
             } else {
@@ -45,7 +43,7 @@ public class SimilarityConsumer {
                 newSimilarity.setEventA(eventA);
                 newSimilarity.setEventB(eventB);
                 newSimilarity.setScore(score);
-                newSimilarity.setUpdatedAt(updatedAt);
+                newSimilarity.setUpdatedAt(updatedAt);  // ← передаём long
                 eventSimilarityRepository.save(newSimilarity);
                 log.info("Saved new similarity for pair ({}, {}): score={}", eventA, eventB, score);
             }

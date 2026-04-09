@@ -10,7 +10,6 @@ import ru.practicum.analyzer.model.UserAction;
 import ru.practicum.analyzer.repository.UserActionRepository;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Slf4j
@@ -30,34 +29,31 @@ public class UserActionConsumer {
             long userId = action.getUserId();
             long eventId = action.getEventId();
             double newWeight = ActionType.fromAvro(action.getActionType()).getWeight();
-            Instant timestamp = Instant.ofEpochMilli(action.getTimestamp());
+            long timestamp = action.getTimestamp();  // ← long, а не Instant
 
-            // Проверяем, есть ли уже действие пользователя с этим мероприятием
             Optional<UserAction> existingAction = userActionRepository.findByUserIdAndEventId(userId, eventId);
 
             if (existingAction.isPresent()) {
                 UserAction userAction = existingAction.get();
 
-                // Если новый вес больше старого - обновляем
                 if (newWeight > userAction.getWeight()) {
                     log.info("Updating weight for userId={}, eventId={}: old={}, new={}",
                             userId, eventId, userAction.getWeight(), newWeight);
                     userAction.setWeight(newWeight);
                     userAction.setActionType(ActionType.fromAvro(action.getActionType()));
-                    userAction.setTimestamp(timestamp);
+                    userAction.setTimestamp(timestamp);  // ← передаём long
                     userAction.setIsMax(true);
                     userActionRepository.save(userAction);
                 } else {
                     log.debug("No update needed: newWeight <= oldWeight");
                 }
             } else {
-                // Новое действие - сохраняем
                 UserAction newAction = new UserAction();
                 newAction.setUserId(userId);
                 newAction.setEventId(eventId);
                 newAction.setActionType(ActionType.fromAvro(action.getActionType()));
                 newAction.setWeight(newWeight);
-                newAction.setTimestamp(timestamp);
+                newAction.setTimestamp(timestamp);  // ← передаём long
                 newAction.setIsMax(true);
                 userActionRepository.save(newAction);
                 log.info("Saved new user action: userId={}, eventId={}, weight={}",

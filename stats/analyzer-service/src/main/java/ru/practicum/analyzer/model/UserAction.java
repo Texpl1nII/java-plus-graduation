@@ -5,8 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 @Entity
 @Table(name = "user_actions")
 @Data
@@ -32,7 +30,7 @@ public class UserAction {
     private Double weight;
 
     @Column(name = "timestamp", nullable = false)
-    private Instant timestamp;
+    private Long timestamp;  // ← long (timestamp millis)
 
     @Column(name = "is_max", nullable = false)
     private Boolean isMax = false;
