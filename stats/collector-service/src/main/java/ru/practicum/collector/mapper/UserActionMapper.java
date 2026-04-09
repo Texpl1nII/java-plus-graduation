@@ -12,15 +12,15 @@ public class UserActionMapper {
     public static UserActionAvro toAvro(UserActionMessage protoMessage) {
         ActionType actionType = ActionType.fromProto(protoMessage.getActionType());
 
-        // Конвертируем Protobuf Timestamp в milliseconds (long)
-        long timestampMillis = protoMessage.getTimestamp().getSeconds() * 1000 +
-                protoMessage.getTimestamp().getNanos() / 1_000_000;
+        Timestamp protoTimestamp = protoMessage.getTimestamp();
+        long timestampMillis = protoTimestamp.getSeconds() * 1000L +
+                protoTimestamp.getNanos() / 1_000_000L;
 
         return UserActionAvro.newBuilder()
                 .setUserId(protoMessage.getUserId())
                 .setEventId(protoMessage.getEventId())
                 .setActionType(ru.practicum.ewm.stats.avro.ActionTypeAvro.valueOf(actionType.name()))
-                .setTimestamp(timestampMillis)  // ← long, НЕ Instant!
+                .setTimestamp(timestampMillis)
                 .build();
     }
 }
