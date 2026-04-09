@@ -14,28 +14,6 @@ spring:
         format_sql: true
     show-sql: true
 
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-
-  application:
-    name: event-service
-
-  # Настройки для Config Server через Eureka
-  config:
-    import: "optional:configserver:"  # ← убрали прямой URL
-  cloud:
-    config:
-      discovery:
-        enabled: true                 # ← включаем discovery
-        service-id: config-server     # ← имя сервиса в Eureka
-      fail-fast: true
-      retry:
-        max-attempts: 10
-        max-interval: 2000
-        initial-interval: 1000
-
 server:
   port: 0
 

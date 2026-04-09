@@ -8,6 +8,8 @@ spring:
       server:
         native:
           searchLocations: classpath:config/
+      discovery:
+        enabled: false
 
 server:
   port: 0
