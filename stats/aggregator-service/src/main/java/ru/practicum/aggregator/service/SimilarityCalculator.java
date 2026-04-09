@@ -29,7 +29,7 @@ public class SimilarityCalculator {
         long userId = action.getUserId();
         long eventId = action.getEventId();
         double newWeight = ActionType.fromAvro(action.getActionType()).getWeight();
-        long timestamp = action.getTimestamp();
+        long timestamp = action.getTimestamp().toEpochMilli();
 
         // Получаем старый вес
         Double oldWeight = userWeightStorage.getWeight(eventId, userId);
