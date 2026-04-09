@@ -12,61 +12,18 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
-    open-in-view: false
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-
-  application:
-    name: request-service
-
-  config:
-    import: "optional:configserver:http://config-server:8888"
-
-  cloud:
-    config:
-      discovery:
-        enabled: false
 
 server:
   port: 0
 
-# ✅ НОВЫЕ НАСТРОЙКИ ACTUATOR
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info
-  endpoint:
-    health:
-      show-details: always
-
-# Настройки Feign
-feign:
-  httpclient:
-    enabled: true
-  client:
-    config:
-      default:
-        connectTimeout: 5000
-        readTimeout: 5000
-
-# Настройки Eureka
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-    fetch-registry: true
-    register-with-eureka: true
   instance:
     instance-id: ${spring.application.name}:${random.value}
     prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
 
-# ✅ НОВЫЕ НАСТРОЙКИ gRPC КЛИЕНТА
 grpc:
   client:
     collector-service:
@@ -74,16 +31,10 @@ grpc:
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
-  # gRPC сервер не нужен, так как request-service только вызывает gRPC,
-  # но не принимает запросы. Оставляем порт 0 на всякий случай.
   server:
     port: 0
 
-# ✅ НАСТРОЙКИ ЛОГИРОВАНИЯ
 logging:
   level:
     ru.practicum: DEBUG
-    org.springframework.cloud.openfeign: DEBUG
-    org.springframework.web: INFO
     io.grpc: DEBUG
-    net.devh.boot.grpc: DEBUG

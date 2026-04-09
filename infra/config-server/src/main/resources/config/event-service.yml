@@ -22,19 +22,23 @@ spring:
   application:
     name: event-service
 
-  # Настройки для Config Server
+  # Настройки для Config Server через Eureka
   config:
-    import: "optional:configserver:http://config-server:8888"
-
+    import: "optional:configserver:"  # ← убрали прямой URL
   cloud:
     config:
       discovery:
-        enabled: false
+        enabled: true                 # ← включаем discovery
+        service-id: config-server     # ← имя сервиса в Eureka
+      fail-fast: true
+      retry:
+        max-attempts: 10
+        max-interval: 2000
+        initial-interval: 1000
 
 server:
-  port: 0  # случайный порт для gRPC и HTTP
+  port: 0
 
-# Настройки Eureka
 eureka:
   client:
     service-url:
@@ -47,7 +51,6 @@ eureka:
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 
-# Настройки Feign
 feign:
   httpclient:
     enabled: false
@@ -59,7 +62,6 @@ feign:
         connectTimeout: 5000
         readTimeout: 5000
 
-# НОВОЕ: Настройки gRPC клиентов
 grpc:
   client:
     collector-service:
@@ -73,9 +75,8 @@ grpc:
       keepAliveWithoutCalls: true
       negotiationType: plaintext
   server:
-    port: 0  # случайный порт для gRPC сервера (если нужен)
+    port: 0
 
-# Настройки логирования
 logging:
   level:
     ru.practicum: DEBUG
