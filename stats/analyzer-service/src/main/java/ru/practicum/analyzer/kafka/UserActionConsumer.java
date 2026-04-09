@@ -10,6 +10,7 @@ import ru.practicum.analyzer.model.UserAction;
 import ru.practicum.analyzer.repository.UserActionRepository;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Slf4j
@@ -29,7 +30,17 @@ public class UserActionConsumer {
             long userId = action.getUserId();
             long eventId = action.getEventId();
             double newWeight = ActionType.fromAvro(action.getActionType()).getWeight();
-            long timestamp = action.getTimestamp();  // ← long, а не Instant
+
+            // Принудительно конвертируем в long, даже если возвращает Instant
+            long timestamp;
+            Object timestampObj = action.getTimestamp();
+            if (timestampObj instanceof Instant) {
+                timestamp = ((Instant) timestampObj).toEpochMilli();
+            } else if (timestampObj instanceof Long) {
+                timestamp = (Long) timestampObj;
+            } else {
+                timestamp = System.currentTimeMillis();
+            }
 
             Optional<UserAction> existingAction = userActionRepository.findByUserIdAndEventId(userId, eventId);
 
@@ -41,7 +52,7 @@ public class UserActionConsumer {
                             userId, eventId, userAction.getWeight(), newWeight);
                     userAction.setWeight(newWeight);
                     userAction.setActionType(ActionType.fromAvro(action.getActionType()));
-                    userAction.setTimestamp(timestamp);  // ← передаём long
+                    userAction.setTimestamp(timestamp);
                     userAction.setIsMax(true);
                     userActionRepository.save(userAction);
                 } else {
@@ -53,7 +64,7 @@ public class UserActionConsumer {
                 newAction.setEventId(eventId);
                 newAction.setActionType(ActionType.fromAvro(action.getActionType()));
                 newAction.setWeight(newWeight);
-                newAction.setTimestamp(timestamp);  // ← передаём long
+                newAction.setTimestamp(timestamp);
                 newAction.setIsMax(true);
                 userActionRepository.save(newAction);
                 log.info("Saved new user action: userId={}, eventId={}, weight={}",
