@@ -22,6 +22,13 @@
             <version>2.15.0.RELEASE</version>
         </dependency>
 
+        <!-- gRPC Netty (обязательно для работы каналов) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.60.0</version>
+        </dependency>
+
         <!-- Stats Contract (protobuf) -->
         <dependency>
             <groupId>ru.practicum</groupId>
