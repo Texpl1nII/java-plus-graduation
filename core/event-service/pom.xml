@@ -27,6 +27,7 @@
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
             <version>1.60.0</version>
+            <scope>runtime</scope>  <!-- ← добавить scope runtime -->
         </dependency>
 
         <!-- Stats Contract (protobuf) -->
