@@ -4,9 +4,6 @@ server:
 spring:
   application:
     name: collector-service
-  cloud:
-    config:
-      enabled: false  # ← КЛЮЧЕВОЕ: отключаем Config Server
 
 eureka:
   client:
