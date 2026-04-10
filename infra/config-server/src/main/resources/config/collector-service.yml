@@ -7,7 +7,7 @@ spring:
 
   cloud:
     config:
-      enabled: false  # ← КЛЮЧЕВОЕ: отключаем Config Server для collector-service
+      enabled: false
 
 eureka:
   client:
@@ -20,6 +20,8 @@ eureka:
     prefer-ip-address: true
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
+    metadata-map:
+      grpcPort: ${grpc.server.port}  # ← добавляем gRPC порт в метаданные
 
 kafka:
   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
