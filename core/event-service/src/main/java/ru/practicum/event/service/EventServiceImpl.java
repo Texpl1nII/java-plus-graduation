@@ -13,7 +13,7 @@ import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.assembler.EventDtoAssembler;
 import ru.practicum.event.client.CategoryClient;
-import ru.practicum.client.CollectorGrpcClient;
+import ru.practicum.event.client.CollectorGrpcClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;

@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.practicum.StatClient;
 import ru.practicum.dto.ViewStatsDto;
-import ru.practicum.client.AnalyzerGrpcClient;  // НОВЫЙ импорт
+import ru.practicum.event.client.AnalyzerGrpcClient;  // НОВЫЙ импорт
 import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
