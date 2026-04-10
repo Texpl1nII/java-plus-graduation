@@ -5,10 +5,6 @@ spring:
   application:
     name: collector-service
 
-  cloud:
-    config:
-      enabled: false
-
 eureka:
   client:
     service-url:
@@ -21,16 +17,22 @@ eureka:
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
     metadata-map:
-      grpcPort: ${grpc.server.port}  # ← добавляем gRPC порт в метаданные
-
-kafka:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
-  topics:
-    user-actions: stats.user-actions.v1
+      grpcPort: ${GRPC_PORT:9091}
 
 grpc:
   server:
-    port: 0
+    port: ${GRPC_PORT:9091}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+  producer:
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+  properties:
+    schema.registry.url: ${SCHEMA_REGISTRY_URL:http://schema-registry:8081}
+
+kafka-topics:
+  user-actions: stats.user-actions.v1
 
 logging:
   level:
