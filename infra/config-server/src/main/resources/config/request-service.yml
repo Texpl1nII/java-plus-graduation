@@ -7,11 +7,15 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update  # ← изменить с validate на update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
+    open-in-view: false
+
+  application:
+    name: request-service
 
 server:
   port: 0
@@ -20,9 +24,13 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
   instance:
     instance-id: ${spring.application.name}:${random.value}
     prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
 
 grpc:
   client:
