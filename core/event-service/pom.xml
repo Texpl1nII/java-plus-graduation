@@ -15,43 +15,36 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <dependencies>
-        <!-- ========== GRPC ЗАВИСИМОСТИ (ПОЛНЫЙ НАБОР) ========== -->
+        <!-- ========== GRPC ЗАВИСИМОСТИ (ДЛЯ SPRING BOOT 3) ========== -->
 
-        <!-- gRPC Core (нужен для AbstractManagedChannelImplBuilder) -->
+        <!-- gRPC Client Spring Boot Starter -->
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-core</artifactId>
-            <version>1.60.0</version>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-client-spring-boot-starter</artifactId>
+            <version>3.1.0.RELEASE</version>
         </dependency>
 
         <!-- gRPC Netty Shaded (транспорт) -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.60.0</version>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- gRPC Stub (клиентская заглушка) -->
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>1.60.0</version>
+            <version>1.62.2</version>
         </dependency>
 
         <!-- gRPC Protobuf -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.60.0</version>
+            <version>1.62.2</version>
         </dependency>
 
-        <!-- gRPC Client Spring Boot Starter -->
+        <!-- gRPC Stub (клиентская заглушка) -->
         <dependency>
-            <groupId>net.devh</groupId>
-            <artifactId>grpc-client-spring-boot-starter</artifactId>
-            <version>2.15.0.RELEASE</version>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.62.2</version>
         </dependency>
+
         <!-- Stats Contract (protobuf) -->
         <dependency>
             <groupId>ru.practicum</groupId>

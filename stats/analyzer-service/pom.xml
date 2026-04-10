@@ -42,11 +42,34 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- gRPC -->
+        <!-- ========== GRPC ДЛЯ SPRING BOOT 3 ========== -->
+
+        <!-- gRPC Server Spring Boot Starter -->
         <dependency>
             <groupId>net.devh</groupId>
-            <artifactId>grpc-spring-boot-starter</artifactId>
-            <version>2.15.0.RELEASE</version>
+            <artifactId>grpc-server-spring-boot-starter</artifactId>
+            <version>3.1.0.RELEASE</version>
+        </dependency>
+
+        <!-- gRPC Netty Shaded (транспорт) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.62.2</version>
+        </dependency>
+
+        <!-- gRPC Protobuf -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>1.62.2</version>
+        </dependency>
+
+        <!-- gRPC Stub -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.62.2</version>
         </dependency>
 
         <!-- Stats Contract (protobuf) -->
