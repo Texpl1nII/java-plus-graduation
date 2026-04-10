@@ -5,6 +5,10 @@ spring:
   application:
     name: collector-service
 
+  cloud:
+    config:
+      enabled: false  # ← КЛЮЧЕВОЕ: отключаем Config Server для collector-service
+
 eureka:
   client:
     service-url:
@@ -21,6 +25,10 @@ kafka:
   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   topics:
     user-actions: stats.user-actions.v1
+
+grpc:
+  server:
+    port: 0
 
 logging:
   level:
