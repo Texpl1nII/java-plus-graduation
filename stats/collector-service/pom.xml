@@ -62,7 +62,7 @@
             <version>${grpc.version}</version>
         </dependency>
 
-        <!-- Stats Contract (protobuf) -->
+        <!-- Stats Contract (protobuf) - ВАЖНО! -->
         <dependency>
             <groupId>ru.practicum</groupId>
             <artifactId>stats-contract</artifactId>
@@ -147,6 +147,8 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Avro Maven Plugin для генерации Java классов из .avsc файлов -->
             <plugin>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro-maven-plugin</artifactId>
@@ -160,6 +162,27 @@
                         <configuration>
                             <sourceDirectory>${project.basedir}/src/main/resources/avro</sourceDirectory>
                             <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Добавляем сгенерированные Avro классы в путь сборки -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/avro</source>
+                            </sources>
                         </configuration>
                     </execution>
                 </executions>
