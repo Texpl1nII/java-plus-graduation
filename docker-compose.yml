@@ -221,29 +221,29 @@ services:
 
   # ========== СТАТИСТИКА (старая) ==========
 
-  stats-server:
-    build: ./stats/stats-server
-    container_name: stats-server
-    ports:
-      - "9090:9090"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/stats
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
-      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-    networks:
-      - app-network
+    # stats-server:
+    #   build: ./stats/stats-server
+    #   container_name: stats-server
+    #   ports:
+    #     - "9090:9090"
+    #   depends_on:
+    #     postgres:
+    #       condition: service_healthy
+    #     discovery-server:
+    #       condition: service_healthy
+    #     config-server:
+    #       condition: service_healthy
+    #     db-init:
+    #       condition: service_completed_successfully
+    #   environment:
+    #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/stats
+    #     - SPRING_DATASOURCE_USERNAME=postgres
+    #     - SPRING_DATASOURCE_PASSWORD=postgres
+    #     - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    #     - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+    #     - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
+    #   networks:
+    #     - app-network
 
   # ========== НОВЫЕ СЕРВИСЫ РЕКОМЕНДАТЕЛЬНОЙ СИСТЕМЫ ==========
 
