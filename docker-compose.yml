@@ -347,6 +347,8 @@ services:
       - app-network
 
   collector-service:
+    ports:
+      - "9091:9091"
     build: ./stats/collector-service
     container_name: collector-service
     restart: on-failure
