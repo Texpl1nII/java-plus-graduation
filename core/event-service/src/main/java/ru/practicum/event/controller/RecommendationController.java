@@ -7,8 +7,8 @@ import ru.practicum.event.client.AnalyzerGrpcClient;
 import ru.practicum.event.client.CollectorGrpcClient;
 import ru.practicum.event.dto.RecommendedEventDto;
 import ru.practicum.event.service.EventService;
-import ru.practicum.stats.proto.ActionTypeProto;
-import ru.practicum.stats.proto.RecommendedEvent;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import ru.practicum.ewm.stats.proto.RecommendedEvent;
 
 import java.util.List;
 import java.util.stream.Collectors;

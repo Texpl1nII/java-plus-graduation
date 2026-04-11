@@ -12,7 +12,7 @@ import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
-import ru.practicum.stats.proto.RecommendedEvent;
+import ru.practicum.ewm.stats.proto.RecommendedEvent;
 
 import java.time.LocalDateTime;
 import java.util.*;
