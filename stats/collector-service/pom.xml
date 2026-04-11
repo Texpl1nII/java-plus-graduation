@@ -17,7 +17,8 @@
 
     <properties>
         <avro.version>1.11.3</avro.version>
-        <kafka.version>3.6.0</kafka.version>
+        <grpc.version>1.62.2</grpc.version>
+        <grpc-spring.version>3.1.0.RELEASE</grpc-spring.version>
     </properties>
 
     <dependencies>
@@ -37,28 +38,28 @@
         <dependency>
             <groupId>net.devh</groupId>
             <artifactId>grpc-server-spring-boot-starter</artifactId>
-            <version>3.1.0.RELEASE</version>
+            <version>${grpc-spring.version}</version>
         </dependency>
 
         <!-- gRPC Netty Shaded (транспорт) -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.62.2</version>
+            <version>${grpc.version}</version>
         </dependency>
 
         <!-- gRPC Protobuf -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.62.2</version>
+            <version>${grpc.version}</version>
         </dependency>
 
         <!-- gRPC Stub -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>1.62.2</version>
+            <version>${grpc.version}</version>
         </dependency>
 
         <!-- Stats Contract (protobuf) -->
@@ -94,10 +95,20 @@
             </exclusions>
         </dependency>
 
-        <!-- ========== SPRING CLOUD (ТОЛЬКО EUREKA, БЕЗ CONFIG) ========== -->
+        <!-- ========== SPRING CLOUD ========== -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
         </dependency>
 
         <!-- Lombok -->
@@ -125,6 +136,16 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>ru.practicum.collector.CollectorApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.avro</groupId>

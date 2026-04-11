@@ -4,27 +4,18 @@ server:
 spring:
   application:
     name: collector
-
-  # Настройки Config Server (прямой URL, без discovery)
   config:
-    import: "optional:configserver:http://config-server:8888"
-
+    import: "optional:configserver:"
   cloud:
     config:
       discovery:
-        enabled: false
+        enabled: true
+        service-id: config-server
       fail-fast: true
       retry:
         max-attempts: 20
         max-interval: 3000
         initial-interval: 1000
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    properties:
-      schema:
-        registry:
-          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
 
 eureka:
   client:
@@ -37,14 +28,12 @@ eureka:
     prefer-ip-address: true
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
+    metadata-map:
+      grpcPort: ${GRPC_PORT:9091}
 
 grpc:
   server:
-    port: 0
-
-kafka:
-  topics:
-    user-actions: stats.user-actions.v1
+    port: ${GRPC_PORT:9091}
 
 logging:
   level:
