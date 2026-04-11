@@ -4,7 +4,7 @@ import com.google.protobuf.Timestamp;
 import lombok.experimental.UtilityClass;
 import ru.practicum.collector.model.ActionType;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
-import ru.practicum.stats.proto.UserActionMessage;
+import ru.practicum.ewm.stats.proto.UserActionMessage;
 
 import java.time.Instant;
 
