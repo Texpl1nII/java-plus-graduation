@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: aggregator-service
+    name: aggregator
   config:
     import: "optional:configserver:"
   cloud:
