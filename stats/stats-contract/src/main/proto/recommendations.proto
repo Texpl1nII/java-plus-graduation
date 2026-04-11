@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package stats.service.dashboard;
+package ru.practicum.ewm.stats.proto;  // ← ИЗМЕНИТЬ
 
-option java_package = "ru.practicum.stats.proto";
+option java_package = "ru.practicum.ewm.stats.proto";  // ← ИЗМЕНИТЬ
 option java_outer_classname = "RecommendationsProto";
 option java_multiple_files = true;
 
@@ -27,17 +27,12 @@ message InteractionsCountRequest {
 // Рекомендованное мероприятие
 message RecommendedEvent {
   int64 event_id = 1;
-  double score = 2;  // предсказанная оценка, сходство или сумма весов
+  double score = 2;
 }
 
 // gRPC сервис для получения рекомендаций
 service RecommendationsController {
-  // Получить рекомендации для пользователя
   rpc GetRecommendationsForUser(UserPredictionsRequest) returns (stream RecommendedEvent);
-
-  // Получить мероприятия, похожие на указанное
   rpc GetSimilarEvents(SimilarEventsRequest) returns (stream RecommendedEvent);
-
-  // Получить сумму взаимодействий для мероприятий
   rpc GetInteractionsCount(InteractionsCountRequest) returns (stream RecommendedEvent);
 }
