@@ -16,21 +16,6 @@ spring:
         max-attempts: 20
         max-interval: 3000
         initial-interval: 1000
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: aggregator-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
-      properties:
-        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
-        specific.avro.reader: true
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
-      properties:
-        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
-        auto.register.schemas: true
 
 eureka:
   client:
@@ -44,12 +29,6 @@ eureka:
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 
-kafka:
-  topics:
-    user-actions: stats.user-actions.v1
-    events-similarity: stats.events-similarity.v1
-
 logging:
   level:
     ru.practicum: DEBUG
-    org.springframework.kafka: INFO
