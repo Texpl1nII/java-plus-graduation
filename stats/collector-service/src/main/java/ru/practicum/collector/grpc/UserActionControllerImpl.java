@@ -26,17 +26,6 @@ public class UserActionControllerImpl extends UserActionControllerGrpc.UserActio
                 request.getActionType(),
                 request.getTimestamp());
 
-        // ⬇️⬇️⬇️ ВРЕМЕННО ОТКЛЮЧАЕМ KAFKA ДЛЯ ТЕСТА ⬇️⬇️⬇️
-        log.info("⚠️ Kafka sending is TEMPORARILY DISABLED for gRPC connectivity test");
-
-        // Отправляем успешный ответ без отправки в Kafka
-        responseObserver.onNext(EmptyResponse.newBuilder().build());
-        responseObserver.onCompleted();
-
-        log.info("✅ User action processed successfully (Kafka disabled)");
-
-        // Оригинальный код закомментирован для теста
-        /*
         try {
             // Конвертируем Protobuf → Avro и отправляем в Kafka
             var avroMessage = UserActionMapper.toAvro(request);
@@ -52,6 +41,5 @@ public class UserActionControllerImpl extends UserActionControllerGrpc.UserActio
             log.error("Error processing user action", e);
             responseObserver.onError(e);
         }
-        */
     }
 }

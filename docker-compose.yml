@@ -289,23 +289,20 @@ services:
   schema-registry:
     image: confluentinc/cp-schema-registry:7.5.0
     container_name: schema-registry
+    network_mode: "service:kafka"  # ⬅️ Тоже в сеть Kafka
     depends_on:
       kafka:
         condition: service_healthy
-    ports:
-      - "8081:8081"
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://localhost:9092
+      SCHEMA_REGISTRY_HOST_NAME: localhost
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/subjects || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:8081/subjects || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    networks:
-      - app-network
 
   kafka-init:
     image: confluentinc/cp-kafka:7.5.0
@@ -349,8 +346,7 @@ services:
   collector-service:
     build: ./stats/collector-service
     container_name: collector-service
-    network_mode: host
-    restart: on-failure
+    network_mode: "service:kafka"  # ⬅️ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ - разделяем сеть с Kafka
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -364,15 +360,18 @@ services:
         condition: service_completed_successfully
     environment:
       - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
-      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true  # ← Ищем config-server через Eureka
-      # ⬇️ Убираем SPRING_CONFIG_IMPORT полностью ⬇️
-      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-      - SCHEMA_REGISTRY_URL=http://localhost:8081
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092  # ⬅️ Теперь localhost, т.к. в одной сети с Kafka
+      - SCHEMA_REGISTRY_URL=http://localhost:8081  # ⬅️ localhost для Schema Registry
       - GRPC_PORT=9091
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
       - EUREKA_INSTANCE_HOSTNAME=localhost
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+    # ⬇️ Порты нужно указывать, даже с network_mode: service:kafka ⬇️
+    ports:
+      - "9091:9091"  # gRPC порт
     networks:
       - app-network
 
@@ -392,11 +391,19 @@ services:
       kafka-init:
         condition: service_completed_successfully
     environment:
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+      - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_MAX_BLOCK_MS=60000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_REQUEST_TIMEOUT_MS=60000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRIES=10
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
     networks:
       - app-network
 
@@ -418,6 +425,7 @@ services:
       db-init:
         condition: service_completed_successfully
     environment:
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_analyzer
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -426,6 +434,12 @@ services:
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+      - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_SESSION_TIMEOUT_MS=30000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_HEARTBEAT_INTERVAL_MS=3000
     networks:
       - app-network
 
