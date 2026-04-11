@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: collector-service
+    name: collector
 
   # Настройки Config Server (прямой URL, без discovery)
   config:

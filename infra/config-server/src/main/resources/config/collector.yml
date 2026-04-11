@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: collector-service
+    name: collector  # ← изменить с collector-service на collector
 
 eureka:
   client:
