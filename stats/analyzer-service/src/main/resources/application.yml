@@ -3,56 +3,32 @@ server:
 
 spring:
   application:
-    name: analyzer-service
-
+    name: analyzer
   config:
-    import: "configserver:http://config-server:8888"
-
+    import: "optional:configserver:"
   cloud:
     config:
       discovery:
-        enabled: false
-
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ewm_analyzer}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    properties:
-      schema:
-        registry:
-          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+        enabled: true
+        service-id: config-server
+      fail-fast: true
+      retry:
+        max-attempts: 20
+        max-interval: 3000
+        initial-interval: 1000
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
   instance:
+    instance-id: ${spring.application.name}:${random.value}
     prefer-ip-address: true
-
-grpc:
-  server:
-    port: 0
-
-kafka:
-  topics:
-    user-actions: stats.user-actions.v1
-    events-similarity: stats.events-similarity.v1
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
 
 logging:
   level:
     ru.practicum: DEBUG
-    org.springframework.kafka: INFO
-    org.hibernate.SQL: WARN
