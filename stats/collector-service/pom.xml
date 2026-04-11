@@ -32,37 +32,29 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- ========== GRPC ДЛЯ SPRING BOOT 3 ========== -->
-
-        <!-- gRPC Server Spring Boot Starter -->
+        <!-- ========== GRPC ========== -->
         <dependency>
             <groupId>net.devh</groupId>
             <artifactId>grpc-server-spring-boot-starter</artifactId>
             <version>${grpc-spring.version}</version>
         </dependency>
-
-        <!-- gRPC Netty Shaded (транспорт) -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
             <version>${grpc.version}</version>
         </dependency>
-
-        <!-- gRPC Protobuf -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
             <version>${grpc.version}</version>
         </dependency>
-
-        <!-- gRPC Stub -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
             <version>${grpc.version}</version>
         </dependency>
 
-        <!-- Stats Contract (protobuf) - ВАЖНО! -->
+        <!-- ========== STATS CONTRACT (ВАЖНО!) ========== -->
         <dependency>
             <groupId>ru.practicum</groupId>
             <artifactId>stats-contract</artifactId>
@@ -95,17 +87,15 @@
             </exclusions>
         </dependency>
 
-        <!-- ========== SPRING CLOUD ========== -->
+        <!-- Spring Cloud -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.retry</groupId>
             <artifactId>spring-retry</artifactId>
@@ -148,7 +138,6 @@
                 </executions>
             </plugin>
 
-            <!-- Avro Maven Plugin для генерации Java классов из .avsc файлов -->
             <plugin>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro-maven-plugin</artifactId>
@@ -167,7 +156,6 @@
                 </executions>
             </plugin>
 
-            <!-- Добавляем сгенерированные Avro классы в путь сборки -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
