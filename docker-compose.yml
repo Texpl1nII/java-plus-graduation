@@ -336,7 +336,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - SCHEMA_REGISTRY_URL=http://localhost:8081
     networks:
       - app-network
 
