@@ -5,7 +5,6 @@ spring:
   application:
     name: collector
 
-  # Настройки Config Server через discovery
   config:
     import: "optional:configserver:"
 
@@ -21,12 +20,11 @@ spring:
         initial-interval: 1000
 
   kafka:
-    # Эти настройки переопределятся из config-server, но оставляем дефолты для локального запуска
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     properties:
       schema:
         registry:
-          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+          url: ${SCHEMA_REGISTRY_URL:http://schema-registry:8081}
 
 eureka:
   client:
