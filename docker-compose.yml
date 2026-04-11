@@ -347,10 +347,10 @@ services:
       - app-network
 
   collector-service:
-    ports:
-      - "9091:9091"
     build: ./stats/collector-service
     container_name: collector-service
+    ports:
+      - "9091:9091"
     restart: on-failure
     depends_on:
       discovery-server:
@@ -370,6 +370,9 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - GRPC_PORT=9091
+      # ⬇️⬇️⬇️ ВАЖНО: заставить Eureka отдавать хост, а не IP ⬇️⬇️⬇️
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
+      - EUREKA_INSTANCE_HOSTNAME=localhost
     networks:
       - app-network
 
