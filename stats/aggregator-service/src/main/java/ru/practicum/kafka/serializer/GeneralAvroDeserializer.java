@@ -23,13 +23,14 @@ public class GeneralAvroDeserializer<T extends SpecificRecordBase> implements De
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void configure(Map<String, ?> configs, boolean isKey) {
         String targetClassName = (String) configs.get("specific.avro.value.class");
         if (targetClassName != null) {
             try {
                 targetClass = (Class<T>) Class.forName(targetClassName);
             } catch (ClassNotFoundException e) {
-                throw new SerializationException("Cannot find target class", e);
+                throw new SerializationException("Cannot find target class: " + targetClassName, e);
             }
         }
     }
@@ -45,7 +46,7 @@ public class GeneralAvroDeserializer<T extends SpecificRecordBase> implements De
             SpecificDatumReader<T> reader = new SpecificDatumReader<>(targetClass);
             return reader.read(null, decoder);
         } catch (IOException e) {
-            throw new SerializationException("Error deserializing Avro message", e);
+            throw new SerializationException("Error deserializing Avro message from topic: " + topic, e);
         }
     }
 
