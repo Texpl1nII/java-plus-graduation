@@ -287,6 +287,7 @@ services:
   aggregator-service:
     build: ./stats/aggregator-service
     container_name: aggregator-service
+    network_mode: host  # ← ДОБАВИТЬ!
     restart: on-failure
     depends_on:
       discovery-server:
@@ -299,8 +300,8 @@ services:
         condition: service_completed_successfully
     environment:
       - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka  # ← исправить на localhost
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888  # ← исправить на localhost
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
@@ -310,12 +311,11 @@ services:
       - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRIES=10
       - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
       - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
-    networks:
-      - app-network
 
   analyzer-service:
     build: ./stats/analyzer-service
     container_name: analyzer-service
+    network_mode: host  # ← ДОБАВИТЬ!
     restart: on-failure
     depends_on:
       postgres:
@@ -330,11 +330,11 @@ services:
         condition: service_completed_successfully
     environment:
       - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ewm_analyzer
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/ewm_analyzer  # ← localhost, не postgres
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka  # ← localhost
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888  # ← localhost
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
@@ -343,8 +343,6 @@ services:
       - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
       - SPRING_KAFKA_CONSUMER_PROPERTIES_SESSION_TIMEOUT_MS=30000
       - SPRING_KAFKA_CONSUMER_PROPERTIES_HEARTBEAT_INTERVAL_MS=3000
-    networks:
-      - app-network
 
 networks:
   app-network:
