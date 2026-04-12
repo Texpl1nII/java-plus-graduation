@@ -17,10 +17,10 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: analyzer-group
-      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
-      value-deserializer: ru.practicum.kafka.serializer.GeneralAvroDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: ru.practicum.kafka.serializer.GeneralAvroDeserializer  # ← Исправлено!
       properties:
-        specific.avro.value.class: ru.practicum.ewm.stats.avro.UserActionAvro
+        specific.avro.value.class: ru.practicum.ewm.stats.avro.EventSimilarityAvro
       auto-offset-reset: earliest
 
 kafka:
