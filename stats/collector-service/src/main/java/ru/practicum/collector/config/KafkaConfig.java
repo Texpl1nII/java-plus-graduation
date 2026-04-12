@@ -2,16 +2,13 @@ package ru.practicum.collector.config;
 
 import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.LongSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.serializer.JsonSerializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import io.confluent.kafka.serializers.subject.TopicRecordNameStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,26 +16,24 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
+    @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
 
-    @Value("${spring.kafka.properties.schema.registry.url:http://localhost:8081}")
-    private String schemaRegistryUrl;
-
     @Bean
-    public ProducerFactory<String, SpecificRecordBase> producerFactory() {
+    public ProducerFactory<Long, SpecificRecordBase> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
-        configProps.put("schema.registry.url", schemaRegistryUrl);
-        configProps.put("value.subject.name.strategy", TopicRecordNameStrategy.class.getName());
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "ru.practicum.kafka.serializer.GeneralAvroSerializer");
+        configProps.put(ProducerConfig.CLIENT_ID_CONFIG, "stats.collector");
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
+        configProps.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 1000);
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
     @Bean
-    public KafkaTemplate<String, SpecificRecordBase> kafkaTemplate() {
+    public KafkaTemplate<Long, SpecificRecordBase> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }
