@@ -250,54 +250,42 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
-    # network_mode: host  ← УБРАТЬ
-    ports:
-      - "2181:2181"
+    network_mode: host
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - app-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
-    # network_mode: host  ← УБРАТЬ
-    ports:
-      - "9092:9092"
+    network_mode: host
     depends_on:
       zookeeper:
         condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT://localhost:9092
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
-    networks:
-      - app-network
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.5.0
     container_name: schema-registry
-    # network_mode: host  ← УБРАТЬ
-    ports:
-      - "8081:8081"
+    network_mode: host
     depends_on:
       kafka:
         condition: service_healthy
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://localhost:9092
+      SCHEMA_REGISTRY_HOST_NAME: localhost
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-    networks:
-      - app-network
 
   kafka-init:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka-init
-    # network_mode: host  ← УБРАТЬ
+    network_mode: host
     depends_on:
       kafka:
         condition: service_healthy
@@ -306,21 +294,17 @@ services:
     entrypoint: [ "/bin/sh", "-c" ]
     command: |
       "
-      echo 'Waiting for Kafka and Schema Registry...'
       sleep 5
-      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stats.user-actions.v1 --partitions 3 --replication-factor 1
-      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stats.events-similarity.v1 --partitions 3 --replication-factor 1
-      echo '✅ Kafka topics created successfully'
+      kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic stats.user-actions.v1 --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic stats.events-similarity.v1 --partitions 3 --replication-factor 1
+      echo '✅ Topics created'
       exit 0
       "
-    networks:
-      - app-network
 
   collector-service:
     build: ./stats/collector-service
     container_name: collector-service
-    ports:
-      - "9091:9091"
+    network_mode: host
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -333,17 +317,15 @@ services:
       kafka-init:
         condition: service_completed_successfully
     environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - SCHEMA_REGISTRY_URL=http://localhost:8081
       - GRPC_PORT=9091
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
       - EUREKA_INSTANCE_HOSTNAME=localhost
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
-    networks:
-      - app-network
 
   aggregator-service:
     build: ./stats/aggregator-service

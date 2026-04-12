@@ -1,49 +1,19 @@
-server:
-  port: 0
-
 spring:
   application:
     name: collector
-
   config:
-    import: "optional:configserver:"
-
+    import: "configserver:"
   cloud:
     config:
+      fail-fast: false
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
       discovery:
         enabled: true
-        service-id: config-server
-      fail-fast: true
-      retry:
-        max-attempts: 20
-        max-interval: 3000
-        initial-interval: 1000
-
-# ⬇️⬇️⬇️ УБРАТЬ ВСЕ KAFKA НАСТРОЙКИ ОТСЮДА ⬇️⬇️⬇️
-# Они будут в config-server
+        serviceId: config-server
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    instance-id: ${spring.application.name}:${random.value}
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
-    metadata-map:
-      grpcPort: ${GRPC_PORT:9091}
-
-grpc:
-  server:
-    port: 0
-
-kafka:
-  topics:
-    user-actions: stats.user-actions.v1
-
-logging:
-  level:
-    ru.practicum: DEBUG
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/

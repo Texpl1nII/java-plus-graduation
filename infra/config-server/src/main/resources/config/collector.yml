@@ -7,35 +7,22 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
-      properties:
-        schema.registry.url: http://localhost:8081
-        auto.register.schemas: true
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: ru.practicum.kafka.serializer.GeneralAvroSerializer
+      client-id: stats.collector
 
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://discovery-server:8761/eureka/}
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    instance-id: ${spring.application.name}:${random.value}
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
-    metadata-map:
-      grpcPort: ${GRPC_PORT:9091}
+collector:
+  kafka:
+    topics:
+      user-actions: stats.user-actions.v1
 
 grpc:
   server:
     port: 0
 
-kafka:
-  topics:
-    user-actions: stats.user-actions.v1
-
 logging:
   level:
-    ru.practicum: DEBUG
-    org.springframework.kafka: INFO
+    ru.practicum.stats: TRACE
+    org:
+      springframework: ERROR
+      apache.kafka: WARN
