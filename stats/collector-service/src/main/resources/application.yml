@@ -20,24 +20,21 @@ spring:
         initial-interval: 1000
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}  # ← УБРАЛ :kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
       properties:
-        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://schema-registry:8081}
-        # ⬇️⬇️⬇️ Добавить таймауты для диагностики ⬇️⬇️⬇️
+        schema.registry.url: ${SCHEMA_REGISTRY_URL}  # ← УБРАЛ :http://schema-registry:8081
         request.timeout.ms: 60000
         retry.backoff.ms: 500
         reconnect.backoff.ms: 500
         reconnect.backoff.max.ms: 1000
-    # ⬇️⬇️⬇️ ВАЖНО: инициализация при старте ⬇️⬇️⬇️
     listener:
       missing-topics-fatal: false
     template:
       default-topic: stats.user-actions.v1
 
-# ⬇️⬇️⬇️ Добавить настройки для инициализации бинов ⬇️⬇️⬇️
 eureka:
   client:
     service-url:
@@ -64,5 +61,5 @@ logging:
   level:
     ru.practicum: DEBUG
     org.springframework.kafka: INFO
-    org.apache.kafka: DEBUG  # ⬅️ Добавить DEBUG для Kafka
-    org.apache.kafka.clients: DEBUG  # ⬅️ Добавить DEBUG для клиентов
+    org.apache.kafka: DEBUG
+    org.apache.kafka.clients: DEBUG
