@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import ru.practicum.collector.kafka.UserActionProducer;
 import ru.practicum.collector.mapper.UserActionMapper;
-import ru.practicum.ewm.stats.proto.EmptyResponse;
+import ru.practicum.stats.proto.EmptyResponse;
 import ru.practicum.stats.proto.UserActionControllerGrpc;
 import ru.practicum.stats.proto.UserActionMessage;
 
