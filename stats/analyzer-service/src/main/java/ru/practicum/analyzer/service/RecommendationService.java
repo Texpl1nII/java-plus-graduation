@@ -26,14 +26,9 @@ public class RecommendationService {
     public List<Map.Entry<Long, Double>> getSimilarEvents(long eventId, long userId, int maxResults) {
         log.info("Getting similar events for eventId={}, userId={}, maxResults={}", eventId, userId, maxResults);
 
-        // Получаем все мероприятия, похожие на указанное
         List<EventSimilarity> similarities = eventSimilarityRepository.findAllByEventId(eventId);
-
-        // Получаем мероприятия, с которыми пользователь уже взаимодействовал
         Set<Long> interactedEvents = new HashSet<>(userActionRepository.findEventIdsByUserId(userId));
 
-        // Фильтруем: исключаем те, с которыми пользователь уже взаимодействовал
-        // и исключаем само мероприятие
         List<Map.Entry<Long, Double>> similarEvents = new ArrayList<>();
 
         for (EventSimilarity sim : similarities) {
@@ -44,7 +39,6 @@ public class RecommendationService {
             }
         }
 
-        // Сортируем по убыванию score и ограничиваем maxResults
         return similarEvents.stream()
                 .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
                 .limit(maxResults)
@@ -53,6 +47,7 @@ public class RecommendationService {
 
     /**
      * Получить сумму взаимодействий для мероприятий (метод GetInteractionsCount)
+     * ИСПРАВЛЕНО: использует прямой запрос к БД вместо findAll().stream()
      */
     public Map<Long, Double> getInteractionsCount(List<Long> eventIds) {
         log.info("Getting interactions count for eventIds: {}", eventIds);
@@ -60,15 +55,9 @@ public class RecommendationService {
         Map<Long, Double> result = new HashMap<>();
 
         for (Long eventId : eventIds) {
-            List<UserAction> actions = userActionRepository.findAll().stream()
-                    .filter(a -> a.getEventId().equals(eventId))
-                    .collect(Collectors.toList());
-
-            double sum = actions.stream()
-                    .mapToDouble(UserAction::getWeight)
-                    .sum();
-
-            result.put(eventId, sum);
+            Double sum = userActionRepository.sumWeightByEventId(eventId);
+            result.put(eventId, sum != null ? sum : 0.0);
+            log.debug("EventId={}, interactions sum={}", eventId, sum != null ? sum : 0.0);
         }
 
         return result;
@@ -80,7 +69,6 @@ public class RecommendationService {
     public List<Map.Entry<Long, Double>> getRecommendationsForUser(long userId, int maxResults) {
         log.info("Getting recommendations for userId={}, maxResults={}", userId, maxResults);
 
-        // Получаем последние 10 взаимодействий пользователя
         List<UserAction> userActions = userActionRepository.findByUserIdOrderByTimestampDesc(userId);
 
         if (userActions.isEmpty()) {
@@ -88,16 +76,13 @@ public class RecommendationService {
             return Collections.emptyList();
         }
 
-        // Берем последние 10 (или меньше)
         int limit = Math.min(10, userActions.size());
         List<UserAction> recentActions = userActions.subList(0, limit);
 
-        // Получаем ID мероприятий, с которыми пользователь уже взаимодействовал
         Set<Long> interactedEvents = userActions.stream()
                 .map(UserAction::getEventId)
                 .collect(Collectors.toSet());
 
-        // Для каждого недавнего мероприятия находим похожие
         Map<Long, Double> candidateScores = new HashMap<>();
 
         for (UserAction action : recentActions) {
@@ -107,18 +92,13 @@ public class RecommendationService {
             for (EventSimilarity sim : similarities) {
                 long otherEventId = (sim.getEventA() == eventId) ? sim.getEventB() : sim.getEventA();
 
-                // Пропускаем уже взаимодействованные мероприятия
-                if (interactedEvents.contains(otherEventId)) {
-                    continue;
+                if (!interactedEvents.contains(otherEventId)) {
+                    double currentScore = candidateScores.getOrDefault(otherEventId, 0.0);
+                    candidateScores.put(otherEventId, currentScore + sim.getScore());
                 }
-
-                // Накопление score (чем больше похожих мероприятий, тем выше рейтинг)
-                double currentScore = candidateScores.getOrDefault(otherEventId, 0.0);
-                candidateScores.put(otherEventId, currentScore + sim.getScore());
             }
         }
 
-        // Сортируем и ограничиваем
         return candidateScores.entrySet().stream()
                 .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
                 .limit(maxResults)
