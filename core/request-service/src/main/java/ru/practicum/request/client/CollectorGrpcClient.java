@@ -5,10 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import ru.practicum.stats.proto.ActionTypeProto;
 import ru.practicum.ewm.stats.proto.EmptyResponse;
-import ru.practicum.ewm.stats.proto.UserActionControllerGrpc;
-import ru.practicum.ewm.stats.proto.UserActionMessage;
+import ru.practicum.stats.proto.UserActionControllerGrpc;
+import ru.practicum.stats.proto.UserActionMessage;
 
 import java.time.Instant;
 

@@ -1,6 +1,6 @@
 package ru.practicum.collector.model;
 
-import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import ru.practicum.stats.proto.ActionTypeProto;
 
 public enum ActionType {
     VIEW,

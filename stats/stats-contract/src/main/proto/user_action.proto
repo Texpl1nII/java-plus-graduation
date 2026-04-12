@@ -1,18 +1,18 @@
 syntax = "proto3";
 
-package ru.practicum.ewm.stats.proto;
+package stats.service.collector;  // ← ИЗМЕНИТЬ на это
 
 import "google/protobuf/timestamp.proto";
 
-option java_package = "ru.practicum.ewm.stats.proto";
+option java_package = "ru.practicum.stats.proto";  // ← ИЗМЕНИТЬ на это
 option java_outer_classname = "UserActionProto";
 option java_multiple_files = true;
 
 // Тип действия пользователя
 enum ActionTypeProto {
-  ACTION_VIEW = 0;      // просмотр
-  ACTION_REGISTER = 1;  // регистрация
-  ACTION_LIKE = 2;      // лайк
+  ACTION_VIEW = 0;
+  ACTION_REGISTER = 1;
+  ACTION_LIKE = 2;
 }
 
 // Сообщение о действии пользователя
