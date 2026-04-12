@@ -318,6 +318,7 @@ services:
         condition: service_completed_successfully
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
       - SCHEMA_REGISTRY_URL=http://localhost:8081
