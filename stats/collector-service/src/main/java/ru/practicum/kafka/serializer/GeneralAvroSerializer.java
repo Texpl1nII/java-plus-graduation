@@ -1,4 +1,4 @@
-package ru.practicum.collector.kafka.serializer;
+package ru.practicum.kafka.serializer;
 
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;

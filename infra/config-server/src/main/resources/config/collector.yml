@@ -8,7 +8,7 @@ spring:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
-      value-serializer: ru.practicum.kafka.serializer.GeneralAvroSerializer
+      value-serializer: ru.practicum.kafka.serializer.GeneralAvroSerializer  # ← правильный путь
       client-id: stats.collector
 
 kafka:
