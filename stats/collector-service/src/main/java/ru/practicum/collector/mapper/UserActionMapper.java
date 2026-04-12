@@ -4,14 +4,14 @@ import com.google.protobuf.Timestamp;
 import lombok.experimental.UtilityClass;
 import ru.practicum.collector.model.ActionType;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
-import ru.practicum.stats.proto.UserActionMessage;
+import ru.practicum.grpc.stats.action.UserActionProto;
 
 import java.time.Instant;
 
 @UtilityClass
 public class UserActionMapper {
 
-    public static UserActionAvro toAvro(UserActionMessage protoMessage) {
+    public static UserActionAvro toAvro(UserActionProto protoMessage) {
         ActionType actionType = ActionType.fromProto(protoMessage.getActionType());
 
         Timestamp protoTimestamp = protoMessage.getTimestamp();

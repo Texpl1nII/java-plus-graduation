@@ -7,8 +7,8 @@ import ru.practicum.event.client.AnalyzerGrpcClient;
 import ru.practicum.event.client.CollectorGrpcClient;
 import ru.practicum.event.dto.RecommendedEventDto;
 import ru.practicum.event.service.EventService;
-import ru.practicum.stats.proto.ActionTypeProto;
-import ru.practicum.stats.proto.RecommendedEvent;
+import ru.practicum.grpc.stats.action.ActionTypeProto;
+import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,9 +22,6 @@ public class RecommendationController {
     private final CollectorGrpcClient collectorGrpcClient;
     private final EventService eventService;
 
-    /**
-     * GET /events/recommendations - получить рекомендации для пользователя
-     */
     @GetMapping("/events/recommendations")
     public List<RecommendedEventDto> getRecommendations(
             @RequestHeader("X-EWM-USER-ID") long userId,
@@ -32,16 +29,13 @@ public class RecommendationController {
 
         log.info("GET /events/recommendations: userId={}, maxResults={}", userId, maxResults);
 
-        List<RecommendedEvent> recommendations = analyzerGrpcClient.getRecommendationsForUser(userId, maxResults);
+        List<RecommendedEventProto> recommendations = analyzerGrpcClient.getRecommendationsForUser(userId, maxResults);
 
         return recommendations.stream()
                 .map(re -> new RecommendedEventDto(re.getEventId(), re.getScore()))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * PUT /events/{eventId}/like - поставить лайк мероприятию
-     */
     @PutMapping("/events/{eventId}/like")
     public void likeEvent(
             @RequestHeader("X-EWM-USER-ID") long userId,
@@ -49,14 +43,12 @@ public class RecommendationController {
 
         log.info("PUT /events/{}/like: userId={}", eventId, userId);
 
-        // Проверяем, что пользователь зарегистрирован на мероприятие
         boolean isRegistered = eventService.isUserRegisteredOnEvent(userId, eventId);
 
         if (!isRegistered) {
             throw new IllegalArgumentException("User must be registered to the event before liking it");
         }
 
-        // Отправляем LIKE в Collector
         collectorGrpcClient.sendUserAction(userId, eventId, ActionTypeProto.ACTION_LIKE);
     }
 }

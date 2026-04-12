@@ -6,7 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import ru.practicum.analyzer.service.PredictionService;
 import ru.practicum.analyzer.service.RecommendationService;
-import ru.practicum.stats.proto.*;
+import ru.practicum.grpc.stats.analyzer.RecommendationsControllerGrpc;
+import ru.practicum.grpc.stats.recommendation.UserPredictionsRequestProto;
+import ru.practicum.grpc.stats.recommendation.SimilarEventsRequestProto;
+import ru.practicum.grpc.stats.recommendation.InteractionsCountRequestProto;
+import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
 import java.util.List;
 import java.util.Map;
@@ -20,10 +24,10 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
     private final PredictionService predictionService;
 
     @Override
-    public void getRecommendationsForUser(UserPredictionsRequest request,
-                                          StreamObserver<RecommendedEvent> responseObserver) {
+    public void getRecommendationsForUser(UserPredictionsRequestProto request,
+                                          StreamObserver<RecommendedEventProto> responseObserver) {
         long userId = request.getUserId();
-        int maxResults = request.getMaxResults();
+        int maxResults = (int) request.getMaxResults();
 
         log.info("gRPC call: getRecommendationsForUser userId={}, maxResults={}", userId, maxResults);
 
@@ -34,7 +38,7 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
             for (Map.Entry<Long, Double> entry : recommendations) {
                 double predictedRating = predictionService.predictRating(userId, entry.getKey());
 
-                RecommendedEvent event = RecommendedEvent.newBuilder()
+                RecommendedEventProto event = RecommendedEventProto.newBuilder()
                         .setEventId(entry.getKey())
                         .setScore(predictedRating)
                         .build();
@@ -52,11 +56,11 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
     }
 
     @Override
-    public void getSimilarEvents(SimilarEventsRequest request,
-                                 StreamObserver<RecommendedEvent> responseObserver) {
+    public void getSimilarEvents(SimilarEventsRequestProto request,
+                                 StreamObserver<RecommendedEventProto> responseObserver) {
         long eventId = request.getEventId();
         long userId = request.getUserId();
-        int maxResults = request.getMaxResults();
+        int maxResults = (int) request.getMaxResults();
 
         log.info("gRPC call: getSimilarEvents eventId={}, userId={}, maxResults={}",
                 eventId, userId, maxResults);
@@ -66,7 +70,7 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
                     recommendationService.getSimilarEvents(eventId, userId, maxResults);
 
             for (Map.Entry<Long, Double> entry : similarEvents) {
-                RecommendedEvent event = RecommendedEvent.newBuilder()
+                RecommendedEventProto event = RecommendedEventProto.newBuilder()
                         .setEventId(entry.getKey())
                         .setScore(entry.getValue())
                         .build();
@@ -84,9 +88,9 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
     }
 
     @Override
-    public void getInteractionsCount(InteractionsCountRequest request,
-                                     StreamObserver<RecommendedEvent> responseObserver) {
-        List<Long> eventIds = request.getEventIdsList();
+    public void getInteractionsCount(InteractionsCountRequestProto request,
+                                     StreamObserver<RecommendedEventProto> responseObserver) {
+        List<Long> eventIds = request.getEventIdList();
 
         log.info("gRPC call: getInteractionsCount for {} events", eventIds.size());
 
@@ -95,7 +99,7 @@ public class RecommendationsControllerImpl extends RecommendationsControllerGrpc
                     recommendationService.getInteractionsCount(eventIds);
 
             for (Map.Entry<Long, Double> entry : interactionsCount.entrySet()) {
-                RecommendedEvent event = RecommendedEvent.newBuilder()
+                RecommendedEventProto event = RecommendedEventProto.newBuilder()
                         .setEventId(entry.getKey())
                         .setScore(entry.getValue())
                         .build();

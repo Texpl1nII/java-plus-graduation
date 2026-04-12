@@ -26,7 +26,7 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
-import ru.practicum.stats.proto.ActionTypeProto;
+import ru.practicum.grpc.stats.action.ActionTypeProto;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

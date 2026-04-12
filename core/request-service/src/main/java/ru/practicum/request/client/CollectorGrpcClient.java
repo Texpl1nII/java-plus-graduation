@@ -5,10 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-import ru.practicum.stats.proto.ActionTypeProto;
-import ru.practicum.stats.proto.EmptyResponse;
-import ru.practicum.stats.proto.UserActionControllerGrpc;
-import ru.practicum.stats.proto.UserActionMessage;
+import ru.practicum.grpc.stats.collector.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.action.ActionTypeProto;
+import ru.practicum.grpc.stats.action.UserActionProto;
 
 import java.time.Instant;
 
@@ -27,7 +26,7 @@ public class CollectorGrpcClient {
      */
     public void sendRegisterAction(long userId, long eventId) {
         try {
-            UserActionMessage request = UserActionMessage.newBuilder()
+            UserActionProto request = UserActionProto.newBuilder()
                     .setUserId(userId)
                     .setEventId(eventId)
                     .setActionType(ActionTypeProto.ACTION_REGISTER)
@@ -37,11 +36,10 @@ public class CollectorGrpcClient {
                             .build())
                     .build();
 
-            EmptyResponse response = collectorStub.collectUserAction(request);
+            collectorStub.collectUserAction(request);
             log.info("Sent REGISTER action to Collector: userId={}, eventId={}", userId, eventId);
         } catch (Exception e) {
             log.error("Failed to send REGISTER action to Collector: userId={}, eventId={}", userId, eventId, e);
-            // Не бросаем исключение, чтобы не нарушить основной поток создания заявки
         }
     }
 }

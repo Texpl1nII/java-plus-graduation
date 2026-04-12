@@ -5,10 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-import ru.practicum.stats.proto.ActionTypeProto;
-import ru.practicum.stats.proto.EmptyResponse;
-import ru.practicum.stats.proto.UserActionControllerGrpc;
-import ru.practicum.stats.proto.UserActionMessage;
+import ru.practicum.grpc.stats.collector.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.action.UserActionProto;
+import ru.practicum.grpc.stats.action.ActionTypeProto;
 
 import java.time.Instant;
 
@@ -22,7 +21,7 @@ public class CollectorGrpcClient {
 
     public void sendUserAction(long userId, long eventId, ActionTypeProto actionType) {
         try {
-            UserActionMessage request = UserActionMessage.newBuilder()
+            UserActionProto request = UserActionProto.newBuilder()
                     .setUserId(userId)
                     .setEventId(eventId)
                     .setActionType(actionType)
@@ -32,7 +31,7 @@ public class CollectorGrpcClient {
                             .build())
                     .build();
 
-            EmptyResponse response = collectorStub.collectUserAction(request);
+            collectorStub.collectUserAction(request);
             log.info("Sent user action: userId={}, eventId={}, actionType={}", userId, eventId, actionType);
         } catch (Exception e) {
             log.error("Failed to send user action to Collector", e);

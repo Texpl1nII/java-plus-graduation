@@ -4,7 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-import ru.practicum.stats.proto.*;
+import ru.practicum.grpc.stats.analyzer.RecommendationsControllerGrpc;
+import ru.practicum.grpc.stats.recommendation.UserPredictionsRequestProto;
+import ru.practicum.grpc.stats.recommendation.SimilarEventsRequestProto;
+import ru.practicum.grpc.stats.recommendation.InteractionsCountRequestProto;
+import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
 import java.util.Iterator;
 import java.util.List;
@@ -19,14 +23,14 @@ public class AnalyzerGrpcClient {
     @GrpcClient("analyzer-service")
     private RecommendationsControllerGrpc.RecommendationsControllerBlockingStub analyzerStub;
 
-    public List<RecommendedEvent> getRecommendationsForUser(long userId, int maxResults) {
+    public List<RecommendedEventProto> getRecommendationsForUser(long userId, int maxResults) {
         try {
-            UserPredictionsRequest request = UserPredictionsRequest.newBuilder()
+            UserPredictionsRequestProto request = UserPredictionsRequestProto.newBuilder()
                     .setUserId(userId)
                     .setMaxResults(maxResults)
                     .build();
 
-            Iterator<RecommendedEvent> iterator = analyzerStub.getRecommendationsForUser(request);
+            Iterator<RecommendedEventProto> iterator = analyzerStub.getRecommendationsForUser(request);
             return toList(iterator);
         } catch (Exception e) {
             log.error("Failed to get recommendations for user: {}", userId, e);
@@ -34,15 +38,15 @@ public class AnalyzerGrpcClient {
         }
     }
 
-    public List<RecommendedEvent> getSimilarEvents(long eventId, long userId, int maxResults) {
+    public List<RecommendedEventProto> getSimilarEvents(long eventId, long userId, int maxResults) {
         try {
-            SimilarEventsRequest request = SimilarEventsRequest.newBuilder()
+            SimilarEventsRequestProto request = SimilarEventsRequestProto.newBuilder()
                     .setEventId(eventId)
                     .setUserId(userId)
                     .setMaxResults(maxResults)
                     .build();
 
-            Iterator<RecommendedEvent> iterator = analyzerStub.getSimilarEvents(request);
+            Iterator<RecommendedEventProto> iterator = analyzerStub.getSimilarEvents(request);
             return toList(iterator);
         } catch (Exception e) {
             log.error("Failed to get similar events for eventId: {}", eventId, e);
@@ -50,14 +54,14 @@ public class AnalyzerGrpcClient {
         }
     }
 
-    public List<RecommendedEvent> getInteractionsCount(List<Long> eventIds) {
+    public List<RecommendedEventProto> getInteractionsCount(List<Long> eventIds) {
         try {
-            InteractionsCountRequest.Builder builder = InteractionsCountRequest.newBuilder();
+            InteractionsCountRequestProto.Builder builder = InteractionsCountRequestProto.newBuilder();
             for (Long eventId : eventIds) {
-                builder.addEventIds(eventId);
+                builder.addEventId(eventId);
             }
 
-            Iterator<RecommendedEvent> iterator = analyzerStub.getInteractionsCount(builder.build());
+            Iterator<RecommendedEventProto> iterator = analyzerStub.getInteractionsCount(builder.build());
             return toList(iterator);
         } catch (Exception e) {
             log.error("Failed to get interactions count", e);
@@ -65,8 +69,8 @@ public class AnalyzerGrpcClient {
         }
     }
 
-    private List<RecommendedEvent> toList(Iterator<RecommendedEvent> iterator) {
-        Iterable<RecommendedEvent> iterable = () -> iterator;
+    private List<RecommendedEventProto> toList(Iterator<RecommendedEventProto> iterator) {
+        Iterable<RecommendedEventProto> iterable = () -> iterator;
         return StreamSupport.stream(iterable.spliterator(), false)
                 .collect(Collectors.toList());
     }

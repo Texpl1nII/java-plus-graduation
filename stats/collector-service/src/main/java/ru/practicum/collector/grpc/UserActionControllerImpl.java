@@ -7,9 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import ru.practicum.collector.kafka.UserActionProducer;
 import ru.practicum.collector.mapper.UserActionMapper;
-import ru.practicum.stats.proto.EmptyResponse;
-import ru.practicum.stats.proto.UserActionControllerGrpc;
-import ru.practicum.stats.proto.UserActionMessage;
+import ru.practicum.grpc.stats.collector.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.action.UserActionProto;
 
 @Slf4j
 @GrpcService
@@ -19,7 +18,7 @@ public class UserActionControllerImpl extends UserActionControllerGrpc.UserActio
     private final UserActionProducer userActionProducer;
 
     @Override
-    public void collectUserAction(UserActionMessage request, StreamObserver<EmptyResponse> responseObserver) {
+    public void collectUserAction(UserActionProto request, StreamObserver<Empty> responseObserver) {
         log.info("Received user action: userId={}, eventId={}, actionType={}, timestamp={}",
                 request.getUserId(),
                 request.getEventId(),
@@ -27,14 +26,12 @@ public class UserActionControllerImpl extends UserActionControllerGrpc.UserActio
                 request.getTimestamp());
 
         try {
-            // Конвертируем Protobuf → Avro и отправляем в Kafka
             var avroMessage = UserActionMapper.toAvro(request);
             userActionProducer.send(avroMessage);
 
             log.info("Successfully sent to Kafka: {}", avroMessage);
 
-            // Отправляем успешный ответ
-            responseObserver.onNext(EmptyResponse.newBuilder().build());
+            responseObserver.onNext(Empty.getDefaultInstance());
             responseObserver.onCompleted();
 
         } catch (Exception e) {

@@ -5,14 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.practicum.StatClient;
 import ru.practicum.dto.ViewStatsDto;
-import ru.practicum.event.client.AnalyzerGrpcClient;  // НОВЫЙ импорт
 import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
-import ru.practicum.stats.proto.RecommendedEvent;
+import ru.practicum.event.client.AnalyzerGrpcClient;
+import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -211,7 +211,7 @@ public class EventDtoAssembler {
                 .collect(Collectors.toList());
 
         try {
-            List<RecommendedEvent> recommendedEvents = analyzerGrpcClient.getInteractionsCount(eventIds);
+            List<RecommendedEventProto> recommendedEvents = analyzerGrpcClient.getInteractionsCount(eventIds);
 
             if (recommendedEvents == null || recommendedEvents.isEmpty()) {
                 log.debug("No ratings received from Analyzer for events: {}", eventIds);
@@ -220,8 +220,8 @@ public class EventDtoAssembler {
 
             return recommendedEvents.stream()
                     .collect(Collectors.toMap(
-                            RecommendedEvent::getEventId,
-                            RecommendedEvent::getScore,
+                            RecommendedEventProto::getEventId,
+                            RecommendedEventProto::getScore,
                             (e1, e2) -> e1
                     ));
         } catch (Exception e) {
