@@ -319,7 +319,6 @@ services:
   collector-service:
     build: ./stats/collector-service
     container_name: collector-service
-    # network_mode: host  ← УБРАТЬ
     ports:
       - "9091:9091"
     depends_on:

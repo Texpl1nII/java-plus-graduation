@@ -19,21 +19,8 @@ spring:
         max-interval: 3000
         initial-interval: 1000
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}  # ← УБРАЛ :kafka:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
-      properties:
-        schema.registry.url: ${SCHEMA_REGISTRY_URL}  # ← УБРАЛ :http://schema-registry:8081
-        request.timeout.ms: 60000
-        retry.backoff.ms: 500
-        reconnect.backoff.ms: 500
-        reconnect.backoff.max.ms: 1000
-    listener:
-      missing-topics-fatal: false
-    template:
-      default-topic: stats.user-actions.v1
+# ⬇️⬇️⬇️ УБРАТЬ ВСЕ KAFKA НАСТРОЙКИ ОТСЮДА ⬇️⬇️⬇️
+# Они будут в config-server
 
 eureka:
   client:
@@ -60,6 +47,3 @@ kafka:
 logging:
   level:
     ru.practicum: DEBUG
-    org.springframework.kafka: INFO
-    org.apache.kafka: DEBUG
-    org.apache.kafka.clients: DEBUG
