@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 import ru.practicum.stats.proto.UserPredictionsRequest;
-import ru.practicum.ewm.stats.proto.SimilarEventsRequest;
-import ru.practicum.ewm.stats.proto.InteractionsCountRequest;
+import ru.practicum.stats.proto.SimilarEventsRequest;
+import ru.practicum.stats.proto.InteractionsCountRequest;
 
 import java.util.Iterator;
 import java.util.List;

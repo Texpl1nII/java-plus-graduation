@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import ru.practicum.analyzer.service.PredictionService;
 import ru.practicum.analyzer.service.RecommendationService;
-import ru.practicum.ewm.stats.proto.*;
+import ru.practicum.stats.proto.*;
 
 import java.util.List;
 import java.util.Map;
