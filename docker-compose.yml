@@ -287,7 +287,7 @@ services:
   aggregator-service:
     build: ./stats/aggregator-service
     container_name: aggregator-service
-    network_mode: host  # ← ДОБАВИТЬ!
+    network_mode: host
     restart: on-failure
     depends_on:
       discovery-server:
@@ -300,17 +300,24 @@ services:
         condition: service_completed_successfully
     environment:
       - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka  # ← исправить на localhost
-      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888  # ← исправить на localhost
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
       - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
-      - SPRING_KAFKA_PRODUCER_PROPERTIES_MAX_BLOCK_MS=60000
-      - SPRING_KAFKA_PRODUCER_PROPERTIES_REQUEST_TIMEOUT_MS=60000
+      # Увеличенные таймауты для producer
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_MAX_BLOCK_MS=120000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_REQUEST_TIMEOUT_MS=120000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_DELIVERY_TIMEOUT_MS=120000
       - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRIES=10
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRY_BACKOFF_MS=1000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_ACKS=all
+      # Consumer настройки
       - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
       - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_SESSION_TIMEOUT_MS=30000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_HEARTBEAT_INTERVAL_MS=3000
 
   analyzer-service:
     build: ./stats/analyzer-service
