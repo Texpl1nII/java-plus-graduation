@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserActionProducer {
 
-    private final KafkaTemplate<String, SpecificRecordBase> kafkaTemplate;
+    private final KafkaTemplate<Long, SpecificRecordBase> kafkaTemplate;
 
     @Value("${kafka.topics.user-actions}")
     private String userActionsTopic;
