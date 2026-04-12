@@ -92,19 +92,6 @@
             <version>${avro.version}</version>
         </dependency>
 
-        <!-- Confluent Avro Deserializer -->
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-avro-serializer</artifactId>
-            <version>7.5.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
         <!-- ========== SPRING CLOUD ========== -->
 
         <!-- Config Client (для получения конфигурации из Config Server) -->
@@ -160,10 +147,4 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>confluent</id>
-            <url>https://packages.confluent.io/maven/</url>
-        </repository>
-    </repositories>
 </project>

@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: analyzer
   datasource:
     url: jdbc:postgresql://postgres:5432/ewm_analyzer
     username: postgres
@@ -15,14 +17,11 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: analyzer-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+      value-deserializer: ru.practicum.kafka.serializer.GeneralAvroDeserializer
       properties:
-        specific.avro.reader: true
-    properties:
-      schema:
-        registry:
-          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+        specific.avro.value.class: ru.practicum.ewm.stats.avro.UserActionAvro
+      auto-offset-reset: earliest
 
 kafka:
   topics:

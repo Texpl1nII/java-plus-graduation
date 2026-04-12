@@ -1,19 +1,18 @@
 spring:
+  application:
+    name: aggregator
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: aggregator-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+      value-deserializer: ru.practicum.kafka.serializer.GeneralAvroDeserializer
       properties:
-        specific.avro.reader: true
+        specific.avro.value.class: ru.practicum.ewm.stats.avro.UserActionAvro
+      auto-offset-reset: earliest
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
-    properties:
-      schema:
-        registry:
-          url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: ru.practicum.kafka.serializer.GeneralAvroSerializer
 
 kafka:
   topics:
