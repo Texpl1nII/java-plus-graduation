@@ -26,12 +26,16 @@ public class SimilarityProducer {
                 .setEventA(similarity.getEventA())
                 .setEventB(similarity.getEventB())
                 .setScore(similarity.getScore())
-                .setTimestamp(Instant.ofEpochMilli(similarity.getTimestamp()))  // ← long → Instant
+                .setTimestamp(Instant.ofEpochMilli(similarity.getTimestamp()))
                 .build();
 
-        log.info("Sending similarity to topic {}: eventA={}, eventB={}, score={}",
-                similarityTopic, avroMessage.getEventA(), avroMessage.getEventB(), avroMessage.getScore());
+        // Составной ключ из двух event ID
+        String key = similarity.getEventA() + "-" + similarity.getEventB();
 
-        kafkaTemplate.send(similarityTopic, avroMessage);
+        log.info("Sending similarity to topic {}: key={}, eventA={}, eventB={}, score={}",
+                similarityTopic, key, avroMessage.getEventA(), avroMessage.getEventB(), avroMessage.getScore());
+
+        // Отправляем с ключом
+        kafkaTemplate.send(similarityTopic, key, avroMessage);
     }
 }

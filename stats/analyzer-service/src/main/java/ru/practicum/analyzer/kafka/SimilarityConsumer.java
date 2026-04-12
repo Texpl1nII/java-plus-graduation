@@ -2,6 +2,7 @@ package ru.practicum.analyzer.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,18 +20,24 @@ public class SimilarityConsumer {
 
     private final EventSimilarityRepository eventSimilarityRepository;
 
-    @KafkaListener(topics = "${kafka.topics.events-similarity}", groupId = "analyzer-group")
+    @KafkaListener(
+            topics = "${kafka.topics.events-similarity}",
+            groupId = "analyzer-group"
+    )
     @Transactional
-    public void consume(EventSimilarityAvro similarity) {
-        log.info("Received similarity from Kafka: eventA={}, eventB={}, score={}",
-                similarity.getEventA(), similarity.getEventB(), similarity.getScore());
+    public void consume(ConsumerRecord<String, EventSimilarityAvro> record) {
+        String key = record.key();
+        EventSimilarityAvro similarity = record.value();
+
+        log.info("Received similarity from Kafka: key={}, eventA={}, eventB={}, score={}",
+                key, similarity.getEventA(), similarity.getEventB(), similarity.getScore());
 
         try {
             long eventA = similarity.getEventA();
             long eventB = similarity.getEventB();
             double score = similarity.getScore();
 
-            // Принудительно конвертируем в long, даже если возвращает Instant
+            // Конвертируем timestamp в long
             long updatedAt;
             Object timestampObj = similarity.getTimestamp();
             if (timestampObj instanceof Instant) {
