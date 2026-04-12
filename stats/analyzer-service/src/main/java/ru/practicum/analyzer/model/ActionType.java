@@ -1,6 +1,6 @@
 package ru.practicum.analyzer.model;
 
-import ru.practicum.stats.avro.ActionTypeAvro;  // ← добавить импорт
+import ru.practicum.ewm.stats.avro.ActionTypeAvro;  // ← добавить импорт
 
 public enum ActionType {
     VIEW(0.4),
