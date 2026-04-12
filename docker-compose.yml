@@ -219,32 +219,6 @@ services:
     networks:
       - app-network
 
-  # ========== СТАТИСТИКА (старая) ==========
-
-    # stats-server:
-    #   build: ./stats/stats-server
-    #   container_name: stats-server
-    #   ports:
-    #     - "9090:9090"
-    #   depends_on:
-    #     postgres:
-    #       condition: service_healthy
-    #     discovery-server:
-    #       condition: service_healthy
-    #     config-server:
-    #       condition: service_healthy
-    #     db-init:
-    #       condition: service_completed_successfully
-    #   environment:
-    #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/stats
-    #     - SPRING_DATASOURCE_USERNAME=postgres
-    #     - SPRING_DATASOURCE_PASSWORD=postgres
-    #     - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-    #     - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
-    #     - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-    #   networks:
-    #     - app-network
-
   # ========== НОВЫЕ СЕРВИСЫ РЕКОМЕНДАТЕЛЬНОЙ СИСТЕМЫ ==========
 
   zookeeper:
@@ -270,26 +244,12 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.5.0
-    container_name: schema-registry
-    network_mode: host
-    depends_on:
-      kafka:
-        condition: service_healthy
-    environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://localhost:9092
-      SCHEMA_REGISTRY_HOST_NAME: localhost
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-
   kafka-init:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka-init
     network_mode: host
     depends_on:
       kafka:
-        condition: service_healthy
-      schema-registry:
         condition: service_healthy
     entrypoint: [ "/bin/sh", "-c" ]
     command: |
@@ -312,8 +272,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      schema-registry:
-        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
     environment:
@@ -321,7 +279,6 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-      - SCHEMA_REGISTRY_URL=http://localhost:8081
       - GRPC_PORT=9091
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
       - EUREKA_INSTANCE_HOSTNAME=localhost
@@ -338,8 +295,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      schema-registry:
-        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
     environment:
@@ -348,7 +303,6 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
       - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
       - SPRING_KAFKA_PRODUCER_PROPERTIES_MAX_BLOCK_MS=60000
@@ -372,8 +326,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      schema-registry:
-        condition: service_healthy
       db-init:
         condition: service_completed_successfully
     environment:
@@ -385,7 +337,6 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
       - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
       - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
