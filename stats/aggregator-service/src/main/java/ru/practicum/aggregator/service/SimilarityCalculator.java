@@ -31,12 +31,13 @@ public class SimilarityCalculator {
 
         Double oldWeight = userWeightStorage.getWeight(eventId, userId);
 
+        // Если вес не увеличился - ничего не меняем
         if (oldWeight != null && oldWeight >= newWeight) {
-            log.debug("No weight change for userId={}, eventId={}, skipping", userId, eventId);
+            log.debug("No weight increase for userId={}, eventId={}", userId, eventId);
             return List.of();
         }
 
-        // Обновляем вес пользователя для мероприятия
+        // Обновляем вес пользователя
         userWeightStorage.updateWeight(eventId, userId, newWeight);
 
         // Обновляем сумму весов мероприятия
@@ -44,37 +45,40 @@ public class SimilarityCalculator {
         double deltaWeight = newWeight - oldWeightValue;
         eventSumStorage.updateSum(eventId, deltaWeight);
 
-        // Получаем ВСЕ мероприятия, с которыми взаимодействовал этот пользователь
-        // ВНИМАНИЕ: нужен новый метод в UserWeightStorage!
+        // Получаем ВСЕ мероприятия пользователя (включая текущее)
         Map<Long, Double> userEvents = userWeightStorage.getUserEvents(userId);
 
-        List<EventSimilarity> updatedSimilarities = new ArrayList<>();
+        List<EventSimilarity> allSimilarities = new ArrayList<>();
 
+        // Для каждого мероприятия пользователя (кроме текущего) отправляем similarity
         for (Map.Entry<Long, Double> otherEntry : userEvents.entrySet()) {
             long otherEventId = otherEntry.getKey();
             if (otherEventId == eventId) continue;
 
             double otherWeight = otherEntry.getValue();
 
-            // Старый и новый вклад в S_min
+            // Обновляем S_min (если нужно)
             double oldMin = oldWeight == null ? 0 : Math.min(oldWeight, otherWeight);
             double newMin = Math.min(newWeight, otherWeight);
             double deltaMin = newMin - oldMin;
 
             if (deltaMin != 0) {
                 minSumStorage.updateMinSum(eventId, otherEventId, deltaMin);
-
-                double newSimilarity = calculateSimilarity(eventId, otherEventId);
-
-                long eventA = Math.min(eventId, otherEventId);
-                long eventB = Math.max(eventId, otherEventId);
-
-                log.info("Updated similarity: eventA={}, eventB={}, newScore={}", eventA, eventB, newSimilarity);
-                updatedSimilarities.add(new EventSimilarity(eventA, eventB, newSimilarity, timestamp));
             }
+
+            // ВСЕГДА вычисляем актуальный similarity
+            double similarity = calculateSimilarity(eventId, otherEventId);
+
+            long eventA = Math.min(eventId, otherEventId);
+            long eventB = Math.max(eventId, otherEventId);
+
+            log.info("Similarity for pair ({}, {}): score={}", eventA, eventB, similarity);
+
+            // Добавляем ВСЕ пары, даже если score не изменился
+            allSimilarities.add(new EventSimilarity(eventA, eventB, similarity, timestamp));
         }
 
-        return updatedSimilarities;
+        return allSimilarities;
     }
 
     public double calculateSimilarity(long eventA, long eventB) {
