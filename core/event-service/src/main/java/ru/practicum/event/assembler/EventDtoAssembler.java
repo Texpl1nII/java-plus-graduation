@@ -3,8 +3,6 @@ package ru.practicum.event.assembler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.practicum.StatClient;
-import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
@@ -14,7 +12,6 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.client.AnalyzerGrpcClient;
 import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,9 +23,8 @@ public class EventDtoAssembler {
     private final CategoryClient categoryClient;
     private final UserClient userClient;
     private final RequestClient requestClient;
-    private final StatClient statClient;
     private final EventMapper eventMapper;
-    private final AnalyzerGrpcClient analyzerGrpcClient;  // НОВЫЙ
+    private final AnalyzerGrpcClient analyzerGrpcClient;
 
     // ========== ОСНОВНЫЕ МЕТОДЫ ДЛЯ СОБРАНИЯ DTO ==========
 
@@ -38,12 +34,11 @@ public class EventDtoAssembler {
         }
 
         Map<Long, CategoryDto> categoriesMap = getCategoriesBatch(events);
-        Map<Long, Long> views = getViews(events);
         Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
-        Map<Long, Double> ratings = getRatings(events);  // НОВОЕ
+        Map<Long, Double> ratings = getRatings(events);
 
         return events.stream()
-                .map(event -> toFullDto(event, categoriesMap, views, confirmedRequests, ratings))
+                .map(event -> toFullDto(event, categoriesMap, confirmedRequests, ratings))
                 .collect(Collectors.toList());
     }
 
@@ -53,12 +48,11 @@ public class EventDtoAssembler {
         }
 
         Map<Long, CategoryDto> categoriesMap = getCategoriesBatch(events);
-        Map<Long, Long> views = getViews(events);
         Map<Long, Long> confirmedRequests = getConfirmedRequests(events);
-        Map<Long, Double> ratings = getRatings(events);  // НОВОЕ
+        Map<Long, Double> ratings = getRatings(events);
 
         return events.stream()
-                .map(event -> toShortDto(event, categoriesMap, views, confirmedRequests, ratings))
+                .map(event -> toShortDto(event, categoriesMap, confirmedRequests, ratings))
                 .collect(Collectors.toList());
     }
 
@@ -73,24 +67,24 @@ public class EventDtoAssembler {
     // ========== ПРИВАТНЫЕ МЕТОДЫ СОБРАНИЯ ==========
 
     private EventFullDto toFullDto(Event event, Map<Long, CategoryDto> categoriesMap,
-                                   Map<Long, Long> views, Map<Long, Long> confirmedRequests,
-                                   Map<Long, Double> ratings) {  // НОВЫЙ параметр
+                                   Map<Long, Long> confirmedRequests,
+                                   Map<Long, Double> ratings) {
         EventFullDto dto = eventMapper.toFullDto(event);
-        dto.setViews(views.getOrDefault(event.getId(), 0L));
+        dto.setViews(0L);  // views больше не собираем
         dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
-        dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));  // НОВОЕ: сначала из Analyzer, потом из БД
+        dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));
         dto.setCategory(getCategory(event.getCategoryId(), categoriesMap));
         dto.setInitiator(getUser(event.getInitiatorId()));
         return dto;
     }
 
     private EventShortDto toShortDto(Event event, Map<Long, CategoryDto> categoriesMap,
-                                     Map<Long, Long> views, Map<Long, Long> confirmedRequests,
-                                     Map<Long, Double> ratings) {  // НОВЫЙ параметр
+                                     Map<Long, Long> confirmedRequests,
+                                     Map<Long, Double> ratings) {
         EventShortDto dto = eventMapper.toShortDto(event);
-        dto.setViews(views.getOrDefault(event.getId(), 0L));
+        dto.setViews(0L);  // views больше не собираем
         dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
-        dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));  // НОВОЕ
+        dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));
         dto.setCategory(getCategory(event.getCategoryId(), categoriesMap));
         dto.setInitiator(getUser(event.getInitiatorId()));
         return dto;
@@ -152,34 +146,6 @@ public class EventDtoAssembler {
         }
     }
 
-    // ========== ПОЛУЧЕНИЕ VIEWS ==========
-
-    private Map<Long, Long> getViews(List<Event> events) {
-        if (events.isEmpty()) return Collections.emptyMap();
-
-        Map<Long, Long> views = new HashMap<>();
-        List<String> uris = events.stream()
-                .map(event -> "/events/" + event.getId())
-                .collect(Collectors.toList());
-
-        try {
-            List<ViewStatsDto> stats = statClient.getStat(
-                    LocalDateTime.now().minusYears(100),
-                    LocalDateTime.now().plusYears(100),
-                    uris, true);
-            for (ViewStatsDto stat : stats) {
-                String[] parts = stat.getUri().split("/");
-                if (parts.length >= 3) {
-                    Long eventId = Long.parseLong(parts[2]);
-                    views.put(eventId, stat.getHits());
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error getting stats", e);
-        }
-        return views;
-    }
-
     // ========== ПОЛУЧЕНИЕ CONFIRMED REQUESTS ==========
 
     private Map<Long, Long> getConfirmedRequests(List<Event> events) {
@@ -199,7 +165,7 @@ public class EventDtoAssembler {
         }
     }
 
-    // ========== НОВЫЙ МЕТОД: ПОЛУЧЕНИЕ RATINGS ИЗ ANALYZER ==========
+    // ========== ПОЛУЧЕНИЕ RATINGS ИЗ ANALYZER ==========
 
     private Map<Long, Double> getRatings(List<Event> events) {
         if (events == null || events.isEmpty()) {
