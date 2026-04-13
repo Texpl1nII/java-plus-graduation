@@ -9,14 +9,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatClient;
-import feign.FeignException;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.assembler.EventDtoAssembler;
 import ru.practicum.event.client.CategoryClient;
+import ru.practicum.event.client.CollectorGrpcClient;
 import ru.practicum.event.client.RequestClient;
 import ru.practicum.event.client.UserClient;
 import ru.practicum.event.dto.*;
+import ru.practicum.event.enums.RequestStatus;
 import ru.practicum.event.exception.ConflictException;
 import ru.practicum.event.exception.NotFoundException;
 import ru.practicum.event.exception.ValidationException;
@@ -25,6 +26,7 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
+import ru.practicum.grpc.stats.action.ActionTypeProto;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +46,7 @@ public class EventServiceImpl implements EventService {
     private final UserClient userClient;
     private final RequestClient requestClient;
     private final EventDtoAssembler eventDtoAssembler;
+    private final CollectorGrpcClient collectorGrpcClient;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -139,7 +142,6 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getEventsPublic(EventPublicFilterParams params) {
         sendStat(params.getRequest());
 
-        // Парсинг дат
         LocalDateTime start = parseStartDate(params.getRangeStart());
         LocalDateTime end = parseEndDate(params.getRangeEnd());
         validateDates(start, end, params.getRangeStart(), params.getRangeEnd());
@@ -149,13 +151,11 @@ public class EventServiceImpl implements EventService {
 
         builder.and(qEvent.state.eq(EventState.PUBLISHED));
 
-        // Текстовый поиск
         if (params.getText() != null && !params.getText().isBlank()) {
             builder.and(qEvent.annotation.containsIgnoreCase(params.getText())
                     .or(qEvent.description.containsIgnoreCase(params.getText())));
         }
 
-        // Фильтр по категориям
         if (params.getCategories() != null && !params.getCategories().isEmpty()) {
             List<Long> validCategories = validateCategories(params.getCategories());
             if (validCategories.isEmpty()) {
@@ -177,7 +177,6 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.participantLimit.eq(0));
         }
 
-        // Сортировка по VIEWS
         if ("VIEWS".equals(params.getSort())) {
             return getEventsSortedByViews(builder, params);
         }
@@ -217,12 +216,37 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto getEventPublic(Long id, HttpServletRequest request) {
+        log.info("Getting public event with id: {}", id);
+
         Event event = getEventByIdOrThrow(id);
+
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Event must be published");
         }
+
+        // Отправляем VIEW в Collector через gRPC
+        String userIdHeader = request.getHeader("X-EWM-USER-ID");
+        if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                long userId = Long.parseLong(userIdHeader);
+                collectorGrpcClient.sendUserAction(userId, id, ActionTypeProto.ACTION_VIEW);
+                log.info("Sent VIEW action to Collector: userId={}, eventId={}", userId, id);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid user ID header format: {}", userIdHeader);
+            } catch (Exception e) {
+                log.error("Failed to send VIEW action to Collector: userId={}, eventId={}", userIdHeader, id, e);
+            }
+        } else {
+            log.debug("No user ID header found, skipping VIEW action sending");
+        }
+
+        // Старая статистика (для обратной совместимости)
         sendStat(request);
-        return eventDtoAssembler.toFullDto(event);
+
+        // Получаем DTO через Assembler
+        EventFullDto eventFullDto = eventDtoAssembler.toFullDto(event);
+
+        return eventFullDto;
     }
 
     @Override
@@ -251,6 +275,22 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getEventsByCategoryId(Long categoryId) {
         List<Event> events = eventRepository.findAllByCategoryId(categoryId);
         return eventDtoAssembler.toShortDtoList(events);
+    }
+
+    @Override
+    public boolean isUserRegisteredOnEvent(Long userId, Long eventId) {
+        log.debug("Checking if user {} is registered on event {}", userId, eventId);
+        try {
+            List<ParticipationRequestDto> requests = requestClient.getEventRequests(userId, eventId);
+            boolean isRegistered = requests.stream()
+                    .anyMatch(r -> r.getRequesterId().equals(userId) &&
+                            r.getStatus() == RequestStatus.CONFIRMED);
+            log.debug("User {} is registered on event {}: {}", userId, eventId, isRegistered);
+            return isRegistered;
+        } catch (Exception e) {
+            log.error("Error checking user registration: userId={}, eventId={}", userId, eventId, e);
+            return false;
+        }
     }
 
     // ========== CREATE METHODS ==========
@@ -373,12 +413,9 @@ public class EventServiceImpl implements EventService {
         checkUser(userId);
         try {
             return requestClient.changeRequestStatus(userId, eventId, request);
-        } catch (FeignException e) {
-            log.error("Feign error while changing request status: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) {
-                throw new ConflictException(e.getMessage());
-            }
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while changing request status", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
@@ -389,11 +426,9 @@ public class EventServiceImpl implements EventService {
         getEventByIdOrThrow(eventId);
         try {
             return requestClient.createRequest(userId, eventId);
-        } catch (FeignException e) {
-            log.error("Feign error while creating request: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) throw new ConflictException(e.getMessage());
-            if (e.status() == 400) throw new ValidationException(e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while creating request", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
@@ -411,15 +446,13 @@ public class EventServiceImpl implements EventService {
         checkUser(userId);
         try {
             return requestClient.cancelRequest(userId, requestId);
-        } catch (FeignException e) {
-            log.error("Feign error while cancelling request: status={}, message={}", e.status(), e.getMessage());
-            if (e.status() == 409) throw new ConflictException(e.getMessage());
-            if (e.status() == 404) throw new NotFoundException(e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("Error while cancelling request", e);
+            throw new ConflictException(e.getMessage());
         }
     }
 
-    // ========== ПРИВАТНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ PUBLIC ENDPOINT ==========
+    // ========== ПРИВАТНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
 
     private LocalDateTime parseStartDate(String rangeStart) {
         if (rangeStart == null || rangeStart.isBlank()) {
@@ -513,7 +546,10 @@ public class EventServiceImpl implements EventService {
         if (userId == null) return null;
         try {
             UserDto user = userClient.getUserById(userId);
-            return new UserShortDto(user.getId(), user.getName());
+            UserShortDto shortDto = new UserShortDto();
+            shortDto.setId(user.getId());
+            shortDto.setName(user.getName());
+            return shortDto;
         } catch (Exception e) {
             UserShortDto defaultUser = new UserShortDto();
             defaultUser.setId(userId);

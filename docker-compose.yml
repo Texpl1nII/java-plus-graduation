@@ -43,6 +43,7 @@ services:
         CREATE DATABASE IF NOT EXISTS ewm_request;
         CREATE DATABASE IF NOT EXISTS ewm_compilation;
         CREATE DATABASE IF NOT EXISTS stats;
+        CREATE DATABASE IF NOT EXISTS ewm_analyzer;
         EOSQL
         
         echo "All databases created successfully!"
@@ -101,7 +102,8 @@ services:
     networks:
       - app-network
 
-  # Микросервисы
+  # ========== МИКРОСЕРВИСЫ CORE ==========
+
   user-service:
     build: ./core/user-service
     container_name: user-service
@@ -217,11 +219,111 @@ services:
     networks:
       - app-network
 
-  stats-server:
-    build: ./stats/stats-server
-    container_name: stats-server
-    ports:
-      - "9090:9090"
+  # ========== НОВЫЕ СЕРВИСЫ РЕКОМЕНДАТЕЛЬНОЙ СИСТЕМЫ ==========
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    network_mode: host
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    network_mode: host
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-init
+    network_mode: host
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: |
+      "
+      sleep 5
+      kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic stats.user-actions.v1 --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic stats.events-similarity.v1 --partitions 3 --replication-factor 1
+      echo '✅ Topics created'
+      exit 0
+      "
+
+  collector-service:
+    build: ./stats/collector-service
+    container_name: collector-service
+    network_mode: host
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - GRPC_PORT=9091
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
+      - EUREKA_INSTANCE_HOSTNAME=localhost
+      - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+
+  aggregator-service:
+    build: ./stats/aggregator-service
+    container_name: aggregator-service
+    network_mode: host
+    restart: on-failure
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+      - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
+      # Увеличенные таймауты для producer
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_MAX_BLOCK_MS=120000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_REQUEST_TIMEOUT_MS=120000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_DELIVERY_TIMEOUT_MS=120000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRIES=10
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_RETRY_BACKOFF_MS=1000
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_ACKS=all
+      # Consumer настройки
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_SESSION_TIMEOUT_MS=30000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_HEARTBEAT_INTERVAL_MS=3000
+
+  analyzer-service:
+    build: ./stats/analyzer-service
+    container_name: analyzer-service
+    network_mode: host  # ← ДОБАВИТЬ!
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -229,17 +331,25 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
       db-init:
         condition: service_completed_successfully
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/stats
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/ewm_analyzer  # ← localhost, не postgres
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
-      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=false
-    networks:
-      - app-network
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://localhost:8761/eureka  # ← localhost
+      - SPRING_CONFIG_IMPORT=configserver:http://localhost:8888  # ← localhost
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - LOGGING_LEVEL_ORG_APACHE_KAFKA=DEBUG
+      - LOGGING_LEVEL_IO_CONFLUENT=DEBUG
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS=500
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MAX_WAIT_MS=5000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_SESSION_TIMEOUT_MS=30000
+      - SPRING_KAFKA_CONSUMER_PROPERTIES_HEARTBEAT_INTERVAL_MS=3000
 
 networks:
   app-network:

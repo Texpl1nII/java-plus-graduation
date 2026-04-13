@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package stats.service.dashboard;
+
+option java_multiple_files = true;
+option java_package = "ru.practicum.grpc.stats.analyzer";
+
+import "stats/messages/user_predictions_request.proto";
+import "stats/messages/interactions_count_request.proto";
+import "stats/messages/recommended_event.proto";
+import "stats/messages/similar_events_request.proto";
+
+service RecommendationsController {
+  rpc GetRecommendationsForUser(stats.message.recommendation.UserPredictionsRequestProto)
+      returns (stream stats.message.recommendation.RecommendedEventProto);
+
+  rpc GetSimilarEvents(stats.message.recommendation.SimilarEventsRequestProto)
+      returns (stream stats.message.recommendation.RecommendedEventProto);
+
+  rpc GetInteractionsCount(stats.message.recommendation.InteractionsCountRequestProto)
+      returns (stream stats.message.recommendation.RecommendedEventProto);
+}

@@ -17,9 +17,9 @@ public class EventFullDto {
     private String title;
     private String annotation;
     private String description;
-    private CategoryDto category;      // объект
+    private CategoryDto category;
     private Boolean paid;
-    private UserShortDto initiator;    // объект
+    private UserShortDto initiator;
     private LocationDto location;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -38,7 +38,8 @@ public class EventFullDto {
     private Long confirmedRequests;
     private Long views;
 
-    // Геттеры для обратной совместимости
+    private Double rating;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public Long getCategoryId() {
         return category != null ? category.getId() : null;

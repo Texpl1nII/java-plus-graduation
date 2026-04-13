@@ -4,26 +4,34 @@ spring:
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
     show-sql: true
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
 
 server:
   port: 0
 
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
 feign:
-  # Отключаем старый HTTP клиент
   httpclient:
     enabled: false
-  # Включаем Apache HttpClient 5
   hc5:
     enabled: true
   client:
@@ -32,10 +40,25 @@ feign:
         connectTimeout: 5000
         readTimeout: 5000
 
-eureka:
+grpc:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-  instance:
-    instance-id: ${spring.application.name}:${random.value}
-    prefer-ip-address: true
+    collector-service:
+      address: 'discovery:///collector-service'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+    analyzer-service:
+      address: 'discovery:///analyzer-service'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+  server:
+    port: 0
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.cloud.openfeign: DEBUG
+    org.springframework.web: INFO
+    io.grpc: DEBUG
+    net.devh.boot.grpc: DEBUG
