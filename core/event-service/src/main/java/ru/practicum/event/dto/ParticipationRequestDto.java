@@ -25,13 +25,4 @@ public class ParticipationRequestDto {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime created;
-
-    // Геттеры для обратной совместимости с JSON
-    public Long getEvent() {
-        return eventId;
-    }
-
-    public Long getRequester() {
-        return requesterId;
-    }
 }
