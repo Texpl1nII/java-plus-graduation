@@ -10,6 +10,8 @@ import ru.practicum.aggregator.storage.MinSumStorage;
 import ru.practicum.aggregator.storage.UserWeightStorage;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -23,9 +25,9 @@ public class SimilarityCalculator {
 
     /**
      * Обработка нового действия пользователя
-     * @return EventSimilarity если нужно отправить обновления, иначе null
+     * @return List<EventSimilarity> список обновленных пар (может быть пустым)
      */
-    public EventSimilarity processUserAction(UserActionAvro action) {
+    public List<EventSimilarity> processUserAction(UserActionAvro action) {
         long userId = action.getUserId();
         long eventId = action.getEventId();
         double newWeight = ActionType.fromAvro(action.getActionType()).getWeight();
@@ -37,7 +39,7 @@ public class SimilarityCalculator {
         // Если вес не изменился (был такой же или выше) — ничего не делаем
         if (oldWeight != null && oldWeight >= newWeight) {
             log.debug("No weight change for userId={}, eventId={}, skipping", userId, eventId);
-            return null;
+            return List.of();
         }
 
         // Обновляем вес
@@ -50,6 +52,7 @@ public class SimilarityCalculator {
 
         // Обновляем S_min для всех пар с этим мероприятием
         Map<Long, Double> otherEvents = userWeightStorage.getEventUsers(eventId);
+        List<EventSimilarity> updatedSimilarities = new ArrayList<>();
 
         for (Map.Entry<Long, Double> otherEntry : otherEvents.entrySet()) {
             long otherEventId = otherEntry.getKey();
@@ -69,22 +72,21 @@ public class SimilarityCalculator {
                 // Пересчитываем similarity
                 double similarity = calculateSimilarity(eventId, otherEventId);
 
-                log.info("Updated similarity: eventA={}, eventB={}, similarity={}",
-                        Math.min(eventId, otherEventId),
-                        Math.max(eventId, otherEventId),
-                        similarity);
+                long eventA = Math.min(eventId, otherEventId);
+                long eventB = Math.max(eventId, otherEventId);
+                double oldSimilarity = getCurrentSimilarity(eventA, eventB);
 
-                // Возвращаем обновление для отправки в Kafka
-                return new EventSimilarity(
-                        Math.min(eventId, otherEventId),
-                        Math.max(eventId, otherEventId),
-                        similarity,
-                        timestamp
-                );
+                // Отправляем только если similarity изменился
+                if (Math.abs(oldSimilarity - similarity) > 0.0001) {
+                    log.info("Updated similarity: eventA={}, eventB={}, oldScore={}, newScore={}",
+                            eventA, eventB, oldSimilarity, similarity);
+
+                    updatedSimilarities.add(new EventSimilarity(eventA, eventB, similarity, timestamp));
+                }
             }
         }
 
-        return null;
+        return updatedSimilarities;
     }
 
     /**
@@ -100,6 +102,20 @@ public class SimilarityCalculator {
             return 0.0;
         }
 
+        return sMin / (Math.sqrt(sA) * Math.sqrt(sB));
+    }
+
+    /**
+     * Получить текущее значение similarity из хранилища
+     */
+    private double getCurrentSimilarity(long eventA, long eventB) {
+        double sMin = minSumStorage.getMinSum(eventA, eventB);
+        double sA = eventSumStorage.getSum(eventA);
+        double sB = eventSumStorage.getSum(eventB);
+
+        if (sA == 0 || sB == 0) {
+            return 0.0;
+        }
         return sMin / (Math.sqrt(sA) * Math.sqrt(sB));
     }
 }

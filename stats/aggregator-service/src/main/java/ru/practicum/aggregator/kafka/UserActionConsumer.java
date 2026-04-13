@@ -9,6 +9,8 @@ import ru.practicum.aggregator.model.EventSimilarity;
 import ru.practicum.aggregator.service.SimilarityCalculator;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
+import java.util.List;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -29,9 +31,9 @@ public class UserActionConsumer {
                 userId, action.getEventId(), action.getActionType());
 
         try {
-            EventSimilarity similarity = similarityCalculator.processUserAction(action);
+            List<EventSimilarity> similarities = similarityCalculator.processUserAction(action);
 
-            if (similarity != null) {
+            for (EventSimilarity similarity : similarities) {
                 similarityProducer.send(similarity);
             }
         } catch (Exception e) {
