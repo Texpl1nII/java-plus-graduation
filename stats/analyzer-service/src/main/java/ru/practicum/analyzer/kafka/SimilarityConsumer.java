@@ -22,10 +22,12 @@ public class SimilarityConsumer {
 
     @KafkaListener(
             topics = "${kafka.topics.events-similarity}",
-            groupId = "analyzer-group"
+            groupId = "analyzer-group",
+            containerFactory = "eventSimilarityKafkaListenerContainerFactory"  // ← ДОБАВИТЬ ЭТО
     )
     @Transactional
     public void consume(ConsumerRecord<String, EventSimilarityAvro> record) {
+        // остальной код без изменений
         String key = record.key();
         EventSimilarityAvro similarity = record.value();
 
@@ -37,7 +39,6 @@ public class SimilarityConsumer {
             long eventB = similarity.getEventB();
             double score = similarity.getScore();
 
-            // Конвертируем timestamp в long
             long updatedAt;
             Object timestampObj = similarity.getTimestamp();
             if (timestampObj instanceof Instant) {
@@ -65,7 +66,6 @@ public class SimilarityConsumer {
                 eventSimilarityRepository.save(newSimilarity);
                 log.info("Saved new similarity for pair ({}, {}): score={}", eventA, eventB, score);
             }
-
         } catch (Exception e) {
             log.error("Error processing similarity", e);
         }

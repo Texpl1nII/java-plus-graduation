@@ -20,7 +20,7 @@ public interface UserActionRepository extends JpaRepository<UserAction, Long> {
     @Query("SELECT u FROM UserAction u WHERE u.userId = :userId AND u.isMax = true")
     List<UserAction> findMaxWeightsByUserId(@Param("userId") Long userId);
 
-    // НОВЫЙ МЕТОД для суммы весов
-    @Query("SELECT SUM(u.weight) FROM UserAction u WHERE u.eventId = :eventId")
+    // НОВЫЙ МЕТОД - ОБЯЗАТЕЛЬНО ДОБАВИТЬ!
+    @Query("SELECT COALESCE(SUM(u.weight), 0.0) FROM UserAction u WHERE u.eventId = :eventId")
     Double sumWeightByEventId(@Param("eventId") Long eventId);
 }

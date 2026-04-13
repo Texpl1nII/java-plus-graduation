@@ -20,9 +20,14 @@ public class UserActionConsumer {
 
     private final UserActionRepository userActionRepository;
 
-    @KafkaListener(topics = "${kafka.topics.user-actions}", groupId = "analyzer-group")
+    @KafkaListener(
+            topics = "${kafka.topics.user-actions}",
+            groupId = "analyzer-group",
+            containerFactory = "userActionKafkaListenerContainerFactory"  // ← ДОБАВИТЬ ЭТО
+    )
     @Transactional
     public void consume(UserActionAvro action) {
+        // остальной код без изменений
         log.info("Received user action from Kafka: userId={}, eventId={}, actionType={}",
                 action.getUserId(), action.getEventId(), action.getActionType());
 
@@ -53,8 +58,6 @@ public class UserActionConsumer {
                     userAction.setTimestamp(timestamp);
                     userAction.setIsMax(true);
                     userActionRepository.save(userAction);
-                } else {
-                    log.debug("No update needed: newWeight <= oldWeight");
                 }
             } else {
                 UserAction newAction = new UserAction();
