@@ -8,9 +8,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.StatClient;
-import ru.practicum.dto.EndpointHitDto;
-import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.event.assembler.EventDtoAssembler;
 import ru.practicum.event.client.CategoryClient;
 import ru.practicum.event.client.CollectorGrpcClient;
@@ -40,7 +37,6 @@ import java.util.stream.Collectors;
 public class EventServiceImpl implements EventService {
 
     private final EventRepository eventRepository;
-    private final StatClient statClient;
     private final EventMapper eventMapper;
     private final CategoryClient categoryClient;
     private final UserClient userClient;
@@ -79,15 +75,6 @@ public class EventServiceImpl implements EventService {
     private Event getEventByIdOrThrow(Long eventId) {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
-    }
-
-    private void sendStat(HttpServletRequest request) {
-        EndpointHitDto hit = new EndpointHitDto();
-        hit.setApp("event-service");
-        hit.setUri(request.getRequestURI());
-        hit.setIp(request.getRemoteAddr());
-        hit.setTimestamp(LocalDateTime.now().format(FORMATTER));
-        statClient.hit(hit);
     }
 
     private String decodeUrl(String input) {
@@ -140,8 +127,6 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventShortDto> getEventsPublic(EventPublicFilterParams params) {
-        sendStat(params.getRequest());
-
         LocalDateTime start = parseStartDate(params.getRangeStart());
         LocalDateTime end = parseEndDate(params.getRangeEnd());
         validateDates(start, end, params.getRangeStart(), params.getRangeEnd());
@@ -177,41 +162,11 @@ public class EventServiceImpl implements EventService {
             builder.and(qEvent.participantLimit.eq(0));
         }
 
-        if ("VIEWS".equals(params.getSort())) {
-            return getEventsSortedByViews(builder, params);
-        }
-
         PageRequest pageRequest = PageRequest.of(params.getFrom() / params.getSize(), params.getSize(),
                 Sort.by(Sort.Direction.ASC, "eventDate"));
         List<Event> events = eventRepository.findAll(builder, pageRequest).getContent();
 
         return eventDtoAssembler.toShortDtoList(events);
-    }
-
-    private List<EventShortDto> getEventsSortedByViews(BooleanBuilder builder, EventPublicFilterParams params) {
-        List<Event> events = new ArrayList<>();
-        eventRepository.findAll(builder).forEach(events::add);
-
-        Map<Long, Long> views = getViewsFromStats(events);
-        Map<Long, Long> confirmedRequests = getConfirmedRequestsFromClient(events);
-
-        List<EventShortDto> result = new ArrayList<>();
-        for (Event event : events) {
-            EventShortDto dto = eventMapper.toShortDto(event);
-            dto.setViews(views.getOrDefault(event.getId(), 0L));
-            dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
-            dto.setCategory(getCategoryFromClient(event.getCategoryId()));
-            dto.setInitiator(getUserFromClient(event.getInitiatorId()));
-            result.add(dto);
-        }
-
-        result.sort(Comparator.comparing(EventShortDto::getViews).reversed());
-
-        int from = params.getFrom();
-        int size = params.getSize();
-        int toIndex = Math.min(from + size, result.size());
-
-        return from >= result.size() ? Collections.emptyList() : result.subList(from, toIndex);
     }
 
     @Override
@@ -240,13 +195,8 @@ public class EventServiceImpl implements EventService {
             log.debug("No user ID header found, skipping VIEW action sending");
         }
 
-        // Старая статистика (для обратной совместимости)
-        sendStat(request);
-
         // Получаем DTO через Assembler
-        EventFullDto eventFullDto = eventDtoAssembler.toFullDto(event);
-
-        return eventFullDto;
+        return eventDtoAssembler.toFullDto(event);
     }
 
     @Override
@@ -486,43 +436,6 @@ public class EventServiceImpl implements EventService {
             }
         }
         return validCategories;
-    }
-
-    private Map<Long, Long> getViewsFromStats(List<Event> events) {
-        if (events.isEmpty()) return Collections.emptyMap();
-
-        Map<Long, Long> views = new HashMap<>();
-        List<String> uris = events.stream()
-                .map(event -> "/events/" + event.getId())
-                .collect(Collectors.toList());
-
-        try {
-            List<ViewStatsDto> stats = statClient.getStat(
-                    LocalDateTime.now().minusYears(100),
-                    LocalDateTime.now().plusYears(100),
-                    uris, true);
-            for (ViewStatsDto stat : stats) {
-                String[] parts = stat.getUri().split("/");
-                if (parts.length >= 3) {
-                    views.put(Long.parseLong(parts[2]), stat.getHits());
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error getting stats", e);
-        }
-        return views;
-    }
-
-    private Map<Long, Long> getConfirmedRequestsFromClient(List<Event> events) {
-        if (events.isEmpty()) return Collections.emptyMap();
-
-        List<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toList());
-        try {
-            return requestClient.getConfirmedRequestsCounts(eventIds);
-        } catch (Exception e) {
-            log.error("Error getting confirmed requests counts", e);
-            return Collections.emptyMap();
-        }
     }
 
     private CategoryDto getCategoryFromClient(Long categoryId) {

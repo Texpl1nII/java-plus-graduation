@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.request.client.CollectorGrpcClient;  // НОВЫЙ импорт
+import ru.practicum.request.client.CollectorGrpcClient;
 import ru.practicum.request.client.EventClient;
 import ru.practicum.request.client.UserClient;
 import ru.practicum.request.dto.EventFullDto;
@@ -14,13 +14,13 @@ import ru.practicum.request.dto.ParticipationRequestDto;
 import ru.practicum.request.enums.RequestStatus;
 import ru.practicum.request.exception.BadRequestException;
 import ru.practicum.request.exception.ConflictException;
+import ru.practicum.request.exception.NotFoundException;
 import ru.practicum.request.limit.ParticipantLimitChecker;
 import ru.practicum.request.mapper.ParticipationRequestMapper;
 import ru.practicum.request.model.ParticipationRequest;
 import ru.practicum.request.repository.ParticipationRequestRepository;
 import ru.practicum.request.status.RequestStatusManager;
 import ru.practicum.request.validator.RequestValidator;
-import ru.practicum.request.exception.NotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final RequestValidator validator;
     private final RequestStatusManager statusManager;
     private final ParticipantLimitChecker limitChecker;
-    private final CollectorGrpcClient collectorGrpcClient;  // НОВОЕ поле
+    private final CollectorGrpcClient collectorGrpcClient;
 
     private void checkUserExists(Long userId) {
         try {
@@ -86,7 +86,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         ParticipationRequest saved = repository.save(request);
         log.info("Request created: {}", saved);
 
-        // НОВОЕ: Отправляем REGISTER в Collector
+        // Отправляем REGISTER в Collector
         try {
             collectorGrpcClient.sendRegisterAction(userId, eventId);
             log.info("REGISTER action sent to Collector for userId={}, eventId={}", userId, eventId);
