@@ -23,99 +23,69 @@ public class SimilarityCalculator {
     private final EventSumStorage eventSumStorage;
     private final MinSumStorage minSumStorage;
 
-    /**
-     * Обработка нового действия пользователя
-     * @return List<EventSimilarity> список обновленных пар (может быть пустым)
-     */
     public List<EventSimilarity> processUserAction(UserActionAvro action) {
         long userId = action.getUserId();
         long eventId = action.getEventId();
         double newWeight = ActionType.fromAvro(action.getActionType()).getWeight();
         long timestamp = action.getTimestamp().toEpochMilli();
 
-        // Получаем старый вес
         Double oldWeight = userWeightStorage.getWeight(eventId, userId);
 
-        // Если вес не изменился (был такой же или выше) — ничего не делаем
         if (oldWeight != null && oldWeight >= newWeight) {
             log.debug("No weight change for userId={}, eventId={}, skipping", userId, eventId);
             return List.of();
         }
 
-        // Обновляем вес
+        // Обновляем вес пользователя для мероприятия
         userWeightStorage.updateWeight(eventId, userId, newWeight);
 
-        // Считаем дельту для S_event
+        // Обновляем сумму весов мероприятия
         double oldWeightValue = oldWeight == null ? 0 : oldWeight;
         double deltaWeight = newWeight - oldWeightValue;
         eventSumStorage.updateSum(eventId, deltaWeight);
 
-        // Обновляем S_min для всех пар с этим мероприятием
-        Map<Long, Double> otherEvents = userWeightStorage.getEventUsers(eventId);
+        // Получаем ВСЕ мероприятия, с которыми взаимодействовал этот пользователь
+        // ВНИМАНИЕ: нужен новый метод в UserWeightStorage!
+        Map<Long, Double> userEvents = userWeightStorage.getUserEvents(userId);
+
         List<EventSimilarity> updatedSimilarities = new ArrayList<>();
 
-        for (Map.Entry<Long, Double> otherEntry : otherEvents.entrySet()) {
+        for (Map.Entry<Long, Double> otherEntry : userEvents.entrySet()) {
             long otherEventId = otherEntry.getKey();
             if (otherEventId == eventId) continue;
 
             double otherWeight = otherEntry.getValue();
 
-            // Старый вклад в S_min
+            // Старый и новый вклад в S_min
             double oldMin = oldWeight == null ? 0 : Math.min(oldWeight, otherWeight);
-            // Новый вклад в S_min
             double newMin = Math.min(newWeight, otherWeight);
             double deltaMin = newMin - oldMin;
 
             if (deltaMin != 0) {
                 minSumStorage.updateMinSum(eventId, otherEventId, deltaMin);
 
-                // Пересчитываем similarity
-                double similarity = calculateSimilarity(eventId, otherEventId);
+                double newSimilarity = calculateSimilarity(eventId, otherEventId);
 
                 long eventA = Math.min(eventId, otherEventId);
                 long eventB = Math.max(eventId, otherEventId);
-                double oldSimilarity = getCurrentSimilarity(eventA, eventB);
 
-                // Отправляем только если similarity изменился
-                if (Math.abs(oldSimilarity - similarity) > 0.0001) {
-                    log.info("Updated similarity: eventA={}, eventB={}, oldScore={}, newScore={}",
-                            eventA, eventB, oldSimilarity, similarity);
-
-                    updatedSimilarities.add(new EventSimilarity(eventA, eventB, similarity, timestamp));
-                }
+                log.info("Updated similarity: eventA={}, eventB={}, newScore={}", eventA, eventB, newSimilarity);
+                updatedSimilarities.add(new EventSimilarity(eventA, eventB, newSimilarity, timestamp));
             }
         }
 
         return updatedSimilarities;
     }
 
-    /**
-     * Вычисление косинусного сходства по формуле:
-     * similarity = S_min(A,B) / (sqrt(S_A) * sqrt(S_B))
-     */
     public double calculateSimilarity(long eventA, long eventB) {
         double sMin = minSumStorage.getMinSum(eventA, eventB);
         double sA = eventSumStorage.getSum(eventA);
         double sB = eventSumStorage.getSum(eventB);
 
-        if (sA == 0 || sB == 0) {
+        if (sA <= 0 || sB <= 0) {
             return 0.0;
         }
 
-        return sMin / (Math.sqrt(sA) * Math.sqrt(sB));
-    }
-
-    /**
-     * Получить текущее значение similarity из хранилища
-     */
-    private double getCurrentSimilarity(long eventA, long eventB) {
-        double sMin = minSumStorage.getMinSum(eventA, eventB);
-        double sA = eventSumStorage.getSum(eventA);
-        double sB = eventSumStorage.getSum(eventB);
-
-        if (sA == 0 || sB == 0) {
-            return 0.0;
-        }
         return sMin / (Math.sqrt(sA) * Math.sqrt(sB));
     }
 }

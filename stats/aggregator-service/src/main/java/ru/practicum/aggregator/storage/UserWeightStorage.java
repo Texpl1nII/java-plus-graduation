@@ -37,6 +37,20 @@ public class UserWeightStorage {
         return true;
     }
 
+    public Map<Long, Double> getUserEvents(long userId) {
+        Map<Long, Double> result = new ConcurrentHashMap<>();
+
+        for (Map.Entry<Long, Map<Long, Double>> eventEntry : userWeights.entrySet()) {
+            long eventId = eventEntry.getKey();
+            Double weight = eventEntry.getValue().get(userId);
+            if (weight != null) {
+                result.put(eventId, weight);
+            }
+        }
+
+        return result;
+    }
+
     public Map<Long, Double> getEventUsers(long eventId) {
         return userWeights.getOrDefault(eventId, Map.of());
     }
