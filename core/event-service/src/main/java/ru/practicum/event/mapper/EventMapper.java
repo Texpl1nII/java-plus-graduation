@@ -16,7 +16,7 @@ public interface EventMapper {
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "initiatorId", ignore = true)
     @Mapping(target = "categoryId", source = "categoryId")
-    @Mapping(target = "rating", ignore = true)  // ← ДОБАВИТЬ (новое поле)
+    @Mapping(target = "rating", ignore = true)
     Event toEntity(NewEventDto newEventDto);
 
     @Mapping(target = "id", ignore = true)
@@ -26,17 +26,15 @@ public interface EventMapper {
 
     // toFullDto: category и initiator будут заполняться в Assembler
     @Mapping(target = "confirmedRequests", ignore = true)
-    @Mapping(target = "views", ignore = true)
-    @Mapping(target = "rating", ignore = true)      // ← ДОБАВИТЬ (будет из Analyzer или из БД)
-    @Mapping(target = "category", ignore = true)    // оставляем, заполняется в Assembler
-    @Mapping(target = "initiator", ignore = true)   // оставляем, заполняется в Assembler
+    @Mapping(target = "rating", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "initiator", ignore = true)
     EventFullDto toFullDto(Event event);
 
     // toShortDto: category и initiator будут заполняться в Assembler
     @Mapping(target = "confirmedRequests", ignore = true)
-    @Mapping(target = "views", ignore = true)
-    @Mapping(target = "rating", ignore = true)      // ← ДОБАВИТЬ
-    @Mapping(target = "category", ignore = true)    // оставляем, заполняется в Assembler
-    @Mapping(target = "initiator", ignore = true)   // оставляем, заполняется в Assembler
+    @Mapping(target = "rating", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "initiator", ignore = true)
     EventShortDto toShortDto(Event event);
 }
