@@ -36,8 +36,8 @@ public class EventFullDto {
     private EventState state;
 
     private Long confirmedRequests;
-    private Long views;
 
+    // Рейтинг мероприятия (из рекомендательной системы)
     private Double rating;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

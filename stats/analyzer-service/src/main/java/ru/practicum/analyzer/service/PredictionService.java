@@ -11,7 +11,6 @@ import ru.practicum.analyzer.repository.UserActionRepository;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,6 +26,7 @@ public class PredictionService {
     public double predictRating(long userId, long eventId) {
         log.debug("Predicting rating for userId={}, eventId={}", userId, eventId);
 
+        // Получаем все действия пользователя с максимальными весами
         List<UserAction> userActions = userActionRepository.findMaxWeightsByUserId(userId);
 
         if (userActions.isEmpty()) {
@@ -34,17 +34,10 @@ public class PredictionService {
             return 0.0;
         }
 
-        List<EventSimilarity> similarities = eventSimilarityRepository.findAllByEventId(eventId);
+        // Получаем все схожести для eventId
+        List<EventSimilarity> allSimilarities = eventSimilarityRepository.findAllByEventId(eventId);
 
-        List<EventSimilarity> topNeighbors = similarities.stream()
-                .sorted(Comparator.comparing(EventSimilarity::getScore).reversed())
-                .limit(DEFAULT_NEIGHBORS_COUNT)
-                .collect(Collectors.toList());
-
-        double weightedSum = 0.0;
-        double similaritySum = 0.0;
-
-        // Создаем Map для быстрого поиска
+        // Создаем Map для быстрого поиска оценок пользователя
         Map<Long, Double> userRatings = userActions.stream()
                 .collect(Collectors.toMap(
                         UserAction::getEventId,
@@ -52,7 +45,21 @@ public class PredictionService {
                         (existing, replacement) -> existing
                 ));
 
-        for (EventSimilarity sim : topNeighbors) {
+        // Фильтруем ТОЛЬКО те мероприятия, с которыми пользователь уже взаимодействовал
+        // и берем топ-K по score
+        List<EventSimilarity> userSimilarities = allSimilarities.stream()
+                .filter(sim -> {
+                    long neighborEventId = (sim.getEventA() == eventId) ? sim.getEventB() : sim.getEventA();
+                    return userRatings.containsKey(neighborEventId);
+                })
+                .sorted(Comparator.comparing(EventSimilarity::getScore).reversed())
+                .limit(DEFAULT_NEIGHBORS_COUNT)
+                .collect(Collectors.toList());
+
+        double weightedSum = 0.0;
+        double similaritySum = 0.0;
+
+        for (EventSimilarity sim : userSimilarities) {
             long neighborEventId = (sim.getEventA() == eventId) ? sim.getEventB() : sim.getEventA();
 
             Double weight = userRatings.get(neighborEventId);

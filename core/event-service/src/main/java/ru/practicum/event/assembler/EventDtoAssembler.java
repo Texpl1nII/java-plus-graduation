@@ -70,7 +70,6 @@ public class EventDtoAssembler {
                                    Map<Long, Long> confirmedRequests,
                                    Map<Long, Double> ratings) {
         EventFullDto dto = eventMapper.toFullDto(event);
-        dto.setViews(0L);  // views больше не собираем
         dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
         dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));
         dto.setCategory(getCategory(event.getCategoryId(), categoriesMap));
@@ -82,7 +81,6 @@ public class EventDtoAssembler {
                                      Map<Long, Long> confirmedRequests,
                                      Map<Long, Double> ratings) {
         EventShortDto dto = eventMapper.toShortDto(event);
-        dto.setViews(0L);  // views больше не собираем
         dto.setConfirmedRequests(confirmedRequests.getOrDefault(event.getId(), 0L));
         dto.setRating(ratings.getOrDefault(event.getId(), event.getRating()));
         dto.setCategory(getCategory(event.getCategoryId(), categoriesMap));

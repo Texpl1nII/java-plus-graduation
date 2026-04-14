@@ -29,9 +29,8 @@ public class EventShortDto {
     private EventState state;
 
     private Long confirmedRequests;
-    private Long views;
 
-    // НОВОЕ ПОЛЕ: рейтинг мероприятия (из рекомендательной системы)
+    // Рейтинг мероприятия (из рекомендательной системы)
     private Double rating;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
