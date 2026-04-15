@@ -13,8 +13,6 @@ public interface EventService {
 
     EventFullDto updateEventAdmin(Long eventId, UpdateEventAdminDto request);
 
-    List<EventShortDto> getEventsPublic(EventPublicFilterParams params);
-
     EventFullDto getEventPublic(Long id, HttpServletRequest request);
 
     List<EventShortDto> getEventsUser(Long userId, int from, int size);
@@ -38,4 +36,8 @@ public interface EventService {
     List<ParticipationRequestDto> getRequestsByUser(Long userId);
 
     ParticipationRequestDto cancelRequest(Long userId, Long requestId);
+
+    boolean isUserRegisteredOnEvent(Long userId, Long eventId);
+
+    List<EventShortDto> getEventsPublic(EventPublicFilterParams params);
 }

@@ -10,13 +10,17 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>stat</artifactId>
+    <artifactId>stats</artifactId>
     <packaging>pom</packaging>
 
     <modules>
         <module>stat-dto</module>
         <module>stat-client</module>
         <module>stats-server</module>
+        <module>stats-contract</module>
+        <module>collector-service</module>
+        <module>aggregator-service</module>
+        <module>analyzer-service</module>
     </modules>
 
 </project>
